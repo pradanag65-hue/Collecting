@@ -11,12 +11,21 @@ const blank = () => ({
   sig: [
     { a: 'Mengetahui', b: 'Kepala Bagian SDM', n: '' },
     { a: 'Menyetujui', b: 'Manajer / Kepala', n: '' },
-    { a: '', b: 'Yang diberi tugas,', n: '' },
-    { a: 'Pemberi Tugas', b: 'Atasan Langsung', n: '' }
+    { a: 'Pemberi Tugas', b: '', n: '' },
+    { a: 'Dibuat oleh', b: '', n: '' }
   ].map(s => ({ ...s, img: '', fid: '', dirty: false }))
 });
+/* surat lama: urutan TTD dulu "Yang diberi tugas" lalu "Pemberi Tugas" -> ditukar */
+function migrate(x) {
+  if (x.sig && x.sig[2] && /diberi tugas/i.test(x.sig[2].b || '')) {
+    const m = x.sig[2], p = x.sig[3];
+    m.a = 'Dibuat oleh'; m.b = '';
+    if (p) { p.b = /atasan langsung/i.test(p.b || '') ? '' : p.b; x.sig[2] = p; x.sig[3] = m; }
+  }
+  return x;
+}
 let S = blank(), cfg = { url: '', token: '' };
-try { const d = localStorage.getItem(DRAFT); if (d) S = Object.assign(blank(), JSON.parse(d)); } catch (e) {}
+try { const d = localStorage.getItem(DRAFT); if (d) S = migrate(Object.assign(blank(), JSON.parse(d))); } catch (e) {}
 try { const c = localStorage.getItem(CFG); if (c) cfg = JSON.parse(c); } catch (e) {}
 
 let tm;
@@ -100,7 +109,7 @@ $('addL').onclick = () => { S.lap.push({ t: '', img: '', fid: '', dirty: false }
 /* ---------- tanda tangan ---------- */
 function renderSig() {
   $('sig').innerHTML = S.sig.map((s, i) => `<div class="item"><div class="row"><div><label>Judul atas</label><input data-i="${i}" data-k="a" value="${esc(s.a)}"></div><div><label>Jabatan</label><input data-i="${i}" data-k="b" value="${esc(s.b)}"></div></div>
-  ${i === 2 ? '<p class="mut" style="font-size:13px;margin:8px 0 0">Nama otomatis dari kolom Nama di atas.</p>' : `<label>Nama</label><input data-i="${i}" data-k="n" value="${esc(s.n)}">`}
+  ${i === 3 ? '<p class="mut" style="font-size:13px;margin:8px 0 0">Nama otomatis dari kolom Nama di atas.</p>' : `<label>Nama</label><input data-i="${i}" data-k="n" value="${esc(s.n)}">`}
   <label>Tanda tangan (gambar di kotak)</label><canvas class="pad" data-i="${i}"></canvas>
   <div class="acts"><button class="btn" data-c="${i}">Hapus TTD</button></div></div>`).join('');
   document.querySelectorAll('canvas.pad').forEach(initPad);
@@ -131,9 +140,9 @@ function build() {
     return '<tr>' + r.map(l => `<td>${l ? esc(l.t) : ''}</td>`).join('') + '</tr><tr>' +
       r.map(l => `<td class="ph">${l && l.img ? `<img src="${l.img}">` : ''}</td>`).join('') + '</tr>'; }).join('');
   const jam = S.j1 || S.j2 ? `${S.j1 || ''} s/d ${S.j2 || ''}` : '';
-  const sg = S.sig.map((s, i) => `<div><div>${esc(s.a)}&nbsp;</div><div>${esc(s.b)}</div><div class="im">${s.img ? `<img src="${s.img}">` : ''}</div><div class="nm">${esc(i === 2 ? S.nama : s.n) || '&nbsp;'}</div></div>`).join('');
+  const sg = S.sig.map((s, i) => `<div><div>${esc(s.a)}&nbsp;</div><div>${esc(s.b)}</div><div class="im">${s.img ? `<img src="${s.img}">` : ''}</div><div class="nm">${esc(i === 3 ? S.nama : s.n) || '&nbsp;'}</div></div>`).join('');
   const lk = locs();
-  $('sheet').innerHTML = `<h1>SURAT PERINTAH LEMBUR</h1>
+  $('sheet').innerHTML = `<h1>FORM PENGAMBIL SETORAN</h1>
   <div style="text-align:left">Yang bertanda tangan di bawah ini :</div>
   <div class="f"><b>Nama</b>:<span>${esc(S.nama)}</span></div>
   <div class="f"><b>Jabatan</b>:<span>${esc(S.jabatan)}</span></div>
@@ -178,7 +187,7 @@ async function openRec(id, stay) {
   S = { id: d.id, nama: d.nama, jabatan: d.jabatan, tgl: d.tgl, j1: d.j1, j2: d.j2, tugas: d.tugas,
     lap: d.lap.map(l => ({ t: l.t, img: l.img, fid: l.fid, dirty: false })),
     sig: d.sig.map(s => ({ a: s.a, b: s.b, n: s.n, img: s.img, fid: s.fid, dirty: false })) };
-  saveDraft(); fillFields(); if (!stay) show('E');
+  migrate(S); saveDraft(); fillFields(); if (!stay) show('E');
 }
 async function loadList() {
   const box = $('list');
