@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f4e79">
+<title>Surat Perintah Lembur</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="bar">
+  <button id="tL" class="on">Daftar</button>
+  <button id="tE">Isi form</button>
+  <button id="tV">Pratinjau</button>
+</div>
+<div id="toast"></div>
+
+<!-- DAFTAR -->
+<main id="pL">
+  <div class="acts" style="margin:0 0 10px">
+    <button class="btn pri" id="newBtn">+ Surat baru</button>
+    <button class="btn" id="refBtn">Muat ulang</button>
+  </div>
+  <div id="list"><p class="mut">Belum ada data.</p></div>
+  <fieldset><legend>Koneksi spreadsheet</legend>
+    <label>URL Web App (Apps Script)</label><input id="cfgUrl" placeholder="https://script.google.com/macros/s/.../exec">
+    <label>Token</label><input id="cfgTok" type="password" placeholder="sama dengan TOKEN di Code.gs">
+    <div class="acts"><button class="btn pri" id="cfgSave">Simpan &amp; tes</button></div>
+  </fieldset>
+</main>
+
+<!-- FORM -->
+<main id="pE" hidden>
+  <fieldset><legend>Penugasan</legend>
+    <label>Nama</label><input id="nama">
+    <label>Jabatan</label><input id="jabatan">
+    <label>Tanggal lembur</label><input id="tgl" type="date">
+    <div class="row"><div><label>Mulai</label><input id="j1" type="time"></div><div><label>Selesai</label><input id="j2" type="time"></div></div>
+    <label>Rincian tugas</label><textarea id="tugas" rows="3"></textarea>
+  </fieldset>
+  <fieldset><legend>Laporan tugas</legend>
+    <div id="lap"></div>
+    <div class="acts"><button class="btn pri" id="addL">+ Tambah kegiatan</button></div>
+  </fieldset>
+  <fieldset><legend>Tanda tangan</legend><div id="sig"></div></fieldset>
+  <div class="acts">
+    <button class="btn pri" id="saveBtn">Simpan ke spreadsheet</button>
+    <button class="btn" id="goV">Pratinjau</button>
+  </div>
+</main>
+
+<!-- PRATINJAU -->
+<main id="pV" hidden>
+  <div class="acts" style="margin:0 0 4px">
+    <button class="btn pri" id="prn">Cetak / Simpan PDF</button>
+    <button class="btn" id="back">Kembali edit</button>
+  </div>
+  <div class="stage" id="stage"><div id="sheet"></div></div>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

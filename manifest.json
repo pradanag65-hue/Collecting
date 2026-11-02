@@ -1,0 +1,20 @@
+{
+  "name": "Surat Perintah Lembur",
+  "short_name": "Lembur",
+  "description": "Buat, simpan ke spreadsheet, dan cetak Surat Perintah Lembur + Laporan Tugas",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f3f1ec",
+  "theme_color": "#1f4e79",
+  "lang": "id",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='96' fill='%231f4e79'/%3E%3Crect x='136' y='88' width='240' height='336' rx='16' fill='%23fff'/%3E%3Cpath d='M172 160h168M172 208h168M172 256h168M172 304h104' stroke='%231f4e79' stroke-width='16' stroke-linecap='round'/%3E%3C/svg%3E",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
