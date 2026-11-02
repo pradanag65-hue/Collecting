@@ -46,11 +46,17 @@ $('tL').onclick = () => show('L'); $('tE').onclick = () => show('E'); $('tV').on
 $('goV').onclick = () => show('V'); $('back').onclick = () => show('E');
 
 /* ---------- field umum ---------- */
-['nama', 'jabatan', 'tgl', 'j1', 'j2', 'tugas'].forEach(k => {
+['nama', 'jabatan', 'tgl', 'j1', 'j2'].forEach(k => {
   const el = $(k); el.value = S[k] || '';
   el.addEventListener('input', () => { S[k] = el.value; saveDraft(); });
 });
-function fillFields() { ['nama', 'jabatan', 'tgl', 'j1', 'j2', 'tugas'].forEach(k => $(k).value = S[k] || ''); renderLap(); renderSig(); }
+/* lokasi (maks. 3) disimpan di kolom "tugas", dipisah baris baru */
+const locs = () => { const a = String(S.tugas || '').split('\n'); while (a.length < 3) a.push(''); return a.slice(0, 3); };
+function fillLoc() { locs().forEach((v, i) => $('lk' + i).value = v); }
+document.querySelectorAll('.lk').forEach(el => el.addEventListener('input', () => {
+  S.tugas = [0, 1, 2].map(i => $('lk' + i).value.trim()).join('\n'); saveDraft();
+}));
+function fillFields() { ['nama', 'jabatan', 'tgl', 'j1', 'j2'].forEach(k => $(k).value = S[k] || ''); fillLoc(); renderLap(); renderSig(); }
 
 /* ---------- foto ---------- */
 function compress(file, cb) {
@@ -126,15 +132,15 @@ function build() {
       r.map(l => `<td class="ph">${l && l.img ? `<img src="${l.img}">` : ''}</td>`).join('') + '</tr>'; }).join('');
   const jam = S.j1 || S.j2 ? `${S.j1 || ''} s/d ${S.j2 || ''}` : '';
   const sg = S.sig.map((s, i) => `<div><div>${esc(s.a)}&nbsp;</div><div>${esc(s.b)}</div><div class="im">${s.img ? `<img src="${s.img}">` : ''}</div><div class="nm">${esc(i === 2 ? S.nama : s.n) || '&nbsp;'}</div></div>`).join('');
-  $('sheet').innerHTML = `<div>Saya perintahkan kepada :</div>
-  <h1>SURAT PERINTAH LEMBUR</h1>
+  const lk = locs();
+  $('sheet').innerHTML = `<h1>SURAT PERINTAH LEMBUR</h1>
+  <div style="text-align:left">Yang bertanda tangan di bawah ini :</div>
   <div class="f"><b>Nama</b>:<span>${esc(S.nama)}</span></div>
   <div class="f"><b>Jabatan</b>:<span>${esc(S.jabatan)}</span></div>
-  <div class="tl">Untuk melaksanakan pekerjaan lembur pada :</div>
   <div class="f"><b>Tanggal</b>:<span>${fmtTgl(S.tgl)}</span></div>
   <div class="f"><b>Pukul</b>:<span>${esc(jam)}</span></div>
-  <div class="tl">Dengan rincian tugas sebagai berikut :</div>
-  <div class="ln">${esc(S.tugas)}</div><div class="ln"></div><div class="ln"></div>
+  <div class="tl">Lokasi :</div>
+  ${lk.map(v => `<div class="ln">${esc(v)}</div>`).join('')}
   <hr><h2>LAPORAN TUGAS LEMBUR KARYAWAN</h2>
   <table>${tb}</table><div class="sg">${sg}</div>`;
   fit();
