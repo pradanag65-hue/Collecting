@@ -1,84 +1,78 @@
-{
-  "name": "Form Pengambil Setoran",
-  "short_name": "Setoran",
-  "description": "Buat, simpan ke spreadsheet, dan cetak Form Pengambil Setoran + Laporan Tugas",
-  "start_url": "./index.html",
-  "scope": "./",
-  "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#f3f1ec",
-  "theme_color": "#1f4e79",
-  "lang": "id",
-  "icons": [
-    {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='96' fill='%231f4e79'/%3E%3Crect x='136' y='88' width='240' height='336' rx='16' fill='%23fff'/%3E%3Cpath d='M172 160h168M172 208h168M172 256h168M172 304h104' stroke='%231f4e79' stroke-width='16' stroke-linecap='round'/%3E%3C/svg%3E",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
-  ]
-}<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#1f4e79">
+<meta name="theme-color" content="#0f5c45">
 <title>Form Pengambil Setoran</title>
 <link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="bar">
-  <button id="tL" class="on">Daftar</button>
-  <button id="tE">Isi form</button>
-  <button id="tV">Pratinjau</button>
-</div>
-<div id="toast"></div>
+<header class="top">
+  <svg class="mark" viewBox="0 0 48 20" aria-hidden="true"><path d="M6 10h36" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><circle cx="6" cy="10" r="5" fill="var(--bg)" stroke="currentColor" stroke-width="3"/><circle cx="42" cy="10" r="5" fill="var(--amber)" stroke="currentColor" stroke-width="3"/></svg>
+  <div><h1>Pengambil Setoran</h1><p>Form dan laporan tugas</p></div>
+</header>
+<div id="toast" role="status"></div>
 
 <!-- DAFTAR -->
 <main id="pL">
-  <div class="acts" style="margin:0 0 10px">
-    <button class="btn pri" id="newBtn">+ Surat baru</button>
+  <div class="acts first">
+    <button class="btn pri" id="newBtn">Buat surat baru</button>
     <button class="btn" id="refBtn">Muat ulang</button>
   </div>
   <div id="list"><p class="mut">Belum ada data.</p></div>
-  <fieldset><legend>Koneksi spreadsheet</legend>
-    <label>URL Web App (Apps Script)</label><input id="cfgUrl" placeholder="https://script.google.com/macros/s/.../exec">
-    <label>Token</label><input id="cfgTok" type="password" placeholder="sama dengan TOKEN di Code.gs">
-    <div class="acts"><button class="btn pri" id="cfgSave">Simpan &amp; tes</button></div>
-  </fieldset>
+  <section class="conn">
+    <h2>Koneksi spreadsheet</h2>
+    <label>URL Web App (Apps Script)</label><input id="cfgUrl" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off">
+    <label>Token</label><input id="cfgTok" type="password" autocomplete="off">
+    <div class="acts"><button class="btn pri" id="cfgSave">Simpan dan tes</button></div>
+  </section>
 </main>
 
 <!-- FORM -->
 <main id="pE" hidden>
-  <fieldset><legend>Penugasan</legend>
-    <label>Nama</label><input id="nama">
-    <label>Jabatan</label><input id="jabatan">
-    <label>Tanggal lembur</label><input id="tgl" type="date">
-    <div class="row"><div><label>Mulai</label><input id="j1" type="time"></div><div><label>Selesai</label><input id="j2" type="time"></div></div>
-    <label>Lokasi 1</label><input id="lk0" class="lk">
-    <label>Lokasi 2 (opsional)</label><input id="lk1" class="lk">
-    <label>Lokasi 3 (opsional)</label><input id="lk2" class="lk">
-  </fieldset>
-  <fieldset><legend>Laporan tugas</legend>
-    <div id="lap"></div>
-    <div class="acts"><button class="btn pri" id="addL">+ Tambah kegiatan</button></div>
-  </fieldset>
-  <fieldset><legend>Tanda tangan</legend><div id="sig"></div></fieldset>
-  <div class="acts">
-    <button class="btn pri" id="saveBtn">Simpan ke spreadsheet</button>
+  <div class="route">
+    <section class="stop"><h2>Penugasan</h2>
+      <label>Nama</label><input id="nama" autocomplete="off">
+      <label>Jabatan</label><input id="jabatan">
+      <label>Tanggal</label><input id="tgl" type="date">
+      <div class="row"><div><label>Mulai</label><input id="j1" type="time"></div><div><label>Selesai</label><input id="j2" type="time"></div></div>
+    </section>
+    <section class="stop"><h2>Lokasi</h2>
+      <label>Lokasi 1</label><input id="lk0" class="lk">
+      <label>Lokasi 2 (opsional)</label><input id="lk1" class="lk">
+      <label>Lokasi 3 (opsional)</label><input id="lk2" class="lk">
+    </section>
+    <section class="stop"><h2>Laporan tugas</h2>
+      <div id="lap"></div>
+      <div class="acts"><button class="btn" id="addL">Tambah kegiatan</button></div>
+    </section>
+    <section class="stop"><h2>Tanda tangan</h2><div id="sig"></div></section>
+  </div>
+  <div class="dock">
+    <button class="btn main" id="saveBtn">Simpan ke spreadsheet</button>
     <button class="btn" id="goV">Pratinjau</button>
   </div>
 </main>
 
 <!-- PRATINJAU -->
 <main id="pV" hidden>
-  <div class="acts" style="margin:0 0 4px">
+  <div class="acts first">
     <button class="btn pri" id="prn">Cetak / Simpan PDF</button>
     <button class="btn" id="back">Kembali edit</button>
   </div>
   <div class="stage" id="stage"><div id="sheet"></div></div>
 </main>
+
+<nav class="nav" aria-label="Menu utama">
+  <button id="tL" class="on"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Daftar</button>
+  <button id="tE"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4zM13 7l4 4"/></svg>Isi form</button>
+  <button id="tV"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7"/></svg>Pratinjau</button>
+</nav>
 
 <script src="app.js"></script>
 </body>
