@@ -3,77 +3,120 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0f5c45">
-<title>Form Pengambil Setoran</title>
+<meta name="theme-color" content="#1b2a6b">
+<meta name="color-scheme" content="light dark">
+<title>Pengambil Setoran</title>
 <link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="top">
-  <svg class="mark" viewBox="0 0 48 20" aria-hidden="true"><path d="M6 10h36" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><circle cx="6" cy="10" r="5" fill="var(--bg)" stroke="currentColor" stroke-width="3"/><circle cx="42" cy="10" r="5" fill="var(--amber)" stroke="currentColor" stroke-width="3"/></svg>
-  <div><h1>Pengambil Setoran</h1><p>Form dan laporan tugas</p></div>
-</header>
-<div id="toast" role="status"></div>
 
-<!-- DAFTAR -->
-<main id="pL">
-  <div class="acts first">
-    <button class="btn pri" id="newBtn">Buat surat baru</button>
-    <button class="btn" id="refBtn">Muat ulang</button>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+<symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-doc" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h5"/></symbol>
+<symbol id="i-chart" viewBox="0 0 24 24"><path d="M5 20V10M12 20V4M19 20v-7"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c0-4 4-6 8-6s8 2 8 6"/></symbol>
+<symbol id="i-print" viewBox="0 0 24 24"><path d="M7 9V3h10v6M7 17H4v-7h16v7h-3M7 14h10v7H7z"/></symbol>
+<symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></symbol>
+<symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8h4l2-3h4l2 3h4v11H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/></symbol>
+<symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></symbol>
+<symbol id="i-out" viewBox="0 0 24 24"><path d="M10 4H5v16h5M15 8l4 4-4 4M19 12H9"/></symbol>
+<symbol id="i-key" viewBox="0 0 24 24"><path d="M7 14a4 4 0 1 1 3.9-5H21v3h-2v3h-3v-3h-5.1A4 4 0 0 1 7 14z"/></symbol>
+<symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+<symbol id="i-ref" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></symbol>
+</defs></svg>
+
+<div id="snack" role="status"></div>
+<div id="scrim" hidden></div>
+<div id="bs" class="bsheet" hidden></div>
+
+<!-- MASUK / DAFTAR -->
+<section id="s_login" class="screen" hidden>
+  <div class="hero">
+    <svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><path d="M10 14h44a4 4 0 0 1 4 4v9a6 6 0 0 0 0 10v9a4 4 0 0 1-4 4H10a4 4 0 0 1-4-4v-9a6 6 0 0 0 0-10v-9a4 4 0 0 1 4-4z" fill="#fff"/><path d="M24 20v24" stroke="#e5483a" stroke-width="3" stroke-dasharray="3 3" stroke-linecap="round"/><path d="M32 26h16M32 32h16M32 38h10" stroke="#1b2a6b" stroke-width="3" stroke-linecap="round"/></svg>
+    <h1>Pengambil<br>Setoran</h1>
+    <p>Catat tugas, foto, dan tanda tangan. Rekap otomatis. Data hanya terlihat oleh akunmu.</p>
   </div>
-  <div id="list"><p class="mut">Belum ada data.</p></div>
-  <section class="conn">
-    <h2>Koneksi spreadsheet</h2>
-    <label>URL Web App (Apps Script)</label><input id="cfgUrl" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off">
-    <label>Token</label><input id="cfgTok" type="password" autocomplete="off">
-    <div class="acts"><button class="btn pri" id="cfgSave">Simpan dan tes</button></div>
-  </section>
-</main>
+  <div class="lgbox">
+    <div class="seg"><button id="segIn" class="on">Masuk</button><button id="segUp">Daftar</button></div>
+    <div class="fld up-only" hidden><input id="upNama" placeholder=" " autocomplete="name"><label for="upNama">Nama lengkap</label></div>
+    <div class="fld up-only" hidden><input id="upJab" placeholder=" "><label for="upJab">Jabatan</label></div>
+    <div class="fld"><input id="lgUser" placeholder=" " autocomplete="username" autocapitalize="none" spellcheck="false"><label for="lgUser">Username</label></div>
+    <div class="fld"><input id="lgPass" type="password" placeholder=" " autocomplete="current-password"><label for="lgPass">Kata sandi</label></div>
+    <div class="fld up-only" hidden><input id="upKode" placeholder=" " autocomplete="off"><label for="upKode">Kode pendaftaran</label></div>
+    <p id="lgErr" class="err" role="alert"></p>
+    <button class="btn wide" id="lgGo">Masuk</button>
+    <button class="btn txt wide" id="srvLink">Pengaturan server</button>
+  </div>
+</section>
 
-<!-- FORM -->
-<main id="pE" hidden>
-  <div class="route">
-    <section class="stop"><h2>Penugasan</h2>
-      <label>Nama</label><input id="nama" autocomplete="off">
-      <label>Jabatan</label><input id="jabatan">
-      <label>Tanggal</label><input id="tgl" type="date">
-      <div class="row"><div><label>Mulai</label><input id="j1" type="time"></div><div><label>Selesai</label><input id="j2" type="time"></div></div>
-    </section>
-    <section class="stop"><h2>Lokasi</h2>
-      <label>Lokasi 1</label><input id="lk0" class="lk">
-      <label>Lokasi 2 (opsional)</label><input id="lk1" class="lk">
-      <label>Lokasi 3 (opsional)</label><input id="lk2" class="lk">
-    </section>
-    <section class="stop"><h2>Laporan tugas</h2>
+<!-- BERANDA -->
+<section id="s_home" class="screen" hidden>
+  <header class="hbar">
+    <div><p id="hHi" class="hi"></p><h1 id="hTitle">Surat saya</h1></div>
+    <button class="ib" id="refBtn" aria-label="Muat ulang"><svg class="ic"><use href="#i-ref"/></svg></button>
+  </header>
+  <div id="tab_surat" class="body"><div id="draftBox"></div><div id="list"></div></div>
+  <div id="tab_rekap" class="body" hidden></div>
+  <div id="tab_akun" class="body" hidden></div>
+  <button class="fab" id="fab"><svg class="ic"><use href="#i-plus"/></svg><span>Buat form</span></button>
+  <nav class="nav" aria-label="Menu utama">
+    <button id="n_surat" class="on"><i><svg class="ic"><use href="#i-doc"/></svg></i>Surat</button>
+    <button id="n_rekap"><i><svg class="ic"><use href="#i-chart"/></svg></i>Rekap</button>
+    <button id="n_akun"><i><svg class="ic"><use href="#i-user"/></svg></i>Akun</button>
+  </nav>
+</section>
+
+<!-- EDITOR -->
+<section id="s_edit" class="screen" hidden>
+  <header class="appbar">
+    <button class="ib" id="edBack" aria-label="Kembali"><svg class="ic"><use href="#i-back"/></svg></button>
+    <h2 id="edTitle">Surat baru</h2>
+    <button class="ib" id="edPrev" aria-label="Pratinjau"><svg class="ic"><use href="#i-eye"/></svg></button>
+    <button class="btn sm" id="saveBtn">Simpan</button>
+  </header>
+  <div class="body">
+    <div class="card"><h3>Penugasan</h3>
+      <div class="fld"><input id="nama" placeholder=" " autocomplete="off"><label for="nama">Nama</label></div>
+      <div class="fld"><input id="jabatan" placeholder=" "><label for="jabatan">Jabatan</label></div>
+      <div class="fld fix"><input id="tgl" type="date" placeholder=" "><label for="tgl">Tanggal</label></div>
+      <div class="two">
+        <div class="fld fix"><input id="j1" type="time" placeholder=" "><label for="j1">Mulai</label></div>
+        <div class="fld fix"><input id="j2" type="time" placeholder=" "><label for="j2">Selesai</label></div>
+      </div>
+    </div>
+    <div class="card"><h3>Lokasi</h3><p class="hint">Isi sampai 3 lokasi.</p>
+      <div class="fld"><input id="lk0" class="lk" placeholder=" "><label for="lk0">Lokasi 1</label></div>
+      <div class="fld"><input id="lk1" class="lk" placeholder=" "><label for="lk1">Lokasi 2</label></div>
+      <div class="fld"><input id="lk2" class="lk" placeholder=" "><label for="lk2">Lokasi 3</label></div>
+    </div>
+    <div class="card"><h3>Laporan kegiatan</h3>
       <div id="lap"></div>
-      <div class="acts"><button class="btn" id="addL">Tambah kegiatan</button></div>
-    </section>
-    <section class="stop"><h2>Tanda tangan</h2><div id="sig"></div></section>
+      <button class="btn tonal" id="addL"><svg class="ic"><use href="#i-plus"/></svg>Tambah kegiatan</button>
+    </div>
+    <div class="card"><h3>Tanda tangan</h3><div id="sig"></div></div>
   </div>
-  <div class="dock">
-    <button class="btn main" id="saveBtn">Simpan ke spreadsheet</button>
-    <button class="btn" id="goV">Pratinjau</button>
-  </div>
-</main>
+</section>
 
 <!-- PRATINJAU -->
-<main id="pV" hidden>
-  <div class="acts first">
-    <button class="btn pri" id="prn">Cetak / Simpan PDF</button>
-    <button class="btn" id="back">Kembali edit</button>
-  </div>
+<section id="s_prev" class="screen" hidden>
+  <header class="appbar">
+    <button class="ib" id="pvBack" aria-label="Kembali"><svg class="ic"><use href="#i-back"/></svg></button>
+    <h2>Pratinjau</h2>
+    <button class="btn sm acc" id="prn"><svg class="ic"><use href="#i-print"/></svg>Cetak</button>
+  </header>
   <div class="stage" id="stage"><div id="sheet"></div></div>
-</main>
+</section>
 
-<nav class="nav" aria-label="Menu utama">
-  <button id="tL" class="on"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Daftar</button>
-  <button id="tE"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4zM13 7l4 4"/></svg>Isi form</button>
-  <button id="tV"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7"/></svg>Pratinjau</button>
-</nav>
-
+<div id="rekapPrint"></div>
 <script src="app.js"></script>
 </body>
 </html>
