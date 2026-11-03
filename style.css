@@ -144,6 +144,17 @@ h1,h2,h3,h4,p{margin:0}
 canvas.pad{width:100%;height:130px;background:#fff;border:1.5px dashed var(--line);border-radius:14px;touch-action:none;display:block;margin-top:12px}
 .sgh{margin-top:18px;font-weight:800}.sgh small{display:block;font-weight:500;color:var(--mut)}
 
+.sugs{display:flex;gap:8px;overflow-x:auto;padding:8px 1px 2px;scrollbar-width:none}
+.sugs::-webkit-scrollbar{display:none}
+.sug{flex:none;display:inline-flex;align-items:center;gap:6px;max-width:80vw;height:32px;padding:0 13px 0 9px;border:0;border-radius:16px;background:var(--pri-c);color:var(--on-pri-c);font:600 13px "Plus Jakarta Sans",sans-serif;cursor:pointer}
+.sug .ic{width:15px;height:15px;opacity:.75}
+.qfs{display:flex;gap:8px;overflow-x:auto;padding:10px 1px 0;scrollbar-width:none}
+.qfs::-webkit-scrollbar{display:none}.qfs:empty{display:none}
+.ql{flex:none;align-self:center;font-size:12px;font-weight:700;color:var(--mut)}
+.qf{flex:none;display:inline-flex;align-items:center;gap:6px;max-width:82vw;height:34px;padding:0 14px 0 10px;border:0;border-radius:17px;background:var(--acc);color:var(--on-acc);font:700 13px "Plus Jakarta Sans",sans-serif;cursor:pointer}
+.qf .ic{width:16px;height:16px}.qf span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sug span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
 /* sheet bawah & snackbar */
 #scrim{position:fixed;inset:0;z-index:30;background:#000;opacity:0;transition:opacity .18s}
 #scrim.in{opacity:.45}
