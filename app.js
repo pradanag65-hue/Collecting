@@ -181,7 +181,8 @@ function setView(v) {
   if (v === 'prev') build();
   window.scrollTo(0, 0);
 }
-function go(v) { history.pushState({ v }, ''); setView(v); }
+function go(v) { history.pushState({ v, d: ((history.state && history.state.d) || 0) + 1 }, ''); setView(v); }
+function goHome() { tab = 'surat'; const d = (history.state && history.state.d) || 0; if (d > 0) history.go(-d); else setView('home'); }
 window.addEventListener('popstate', e => {
   if (!ses) return setView('login');
   const v = e.state && e.state.v; setView(v && v !== 'login' ? v : 'home');
@@ -201,7 +202,7 @@ function renderHead() {
   $('hTitle').textContent = selMode ? 'Pilih surat' : { surat: 'Surat saya', rekap: 'Rekap', akun: 'Akun' }[tab];
   $('fab').hidden = tab !== 'surat' || selMode;
   $('selbar').hidden = !selMode;
-  $('selN').textContent = sel.size + ' surat'; $('selPrint').disabled = !sel.size;
+  $('selN').textContent = sel.size + ' surat'; $('selPrint').disabled = !sel.size; $('selEdit').disabled = !sel.size;
 }
 $('edBack').onclick = () => history.back(); $('pvBack').onclick = () => history.back();
 $('edPrev').onclick = () => go('prev');
@@ -299,6 +300,52 @@ $('list').addEventListener('pointermove', e => { if (Math.hypot(e.clientX - lpXY
 ['pointerup', 'pointercancel'].forEach(ev => $('list').addEventListener(ev, () => clearTimeout(lpT)));
 $('list').addEventListener('contextmenu', e => { if (e.target.closest('[data-o]')) e.preventDefault(); });
 $('selBtn').onclick = () => { selMode = !selMode; sel.clear(); renderList(); };
+/* ---- ubah massal (semua atau beberapa tanggal yang dipilih) ---- */
+let BK = null;
+const SLOT = ['Mengetahui', 'Menyetujui', 'Pemberi Tugas', 'Dibuat oleh'];
+function bulkSheet() {
+  const ids = L.filter(r => sel.has(r.id)).map(r => r.id);
+  if (!ids.length) return snack('Pilih surat dulu');
+  if (ids.length > 60) return snack('Maksimal 60 surat sekali ubah');
+  BK = { ids, jabatan: '', sig: [0, 1, 2, 3].map(() => ({ a: '', b: '', n: '', fid: '' })) };
+  openSheet(`<h3>Ubah ${ids.length} surat</h3><p class="mut">Isi hanya bagian yang mau diganti. Kolom kosong tidak diubah.</p>
+    <div class="bkbody"><div class="fld"><input id="bkJab" data-sg="jabatan" placeholder=" "><label for="bkJab">Jabatan pegawai</label></div>
+    ${[0, 1, 2, 3].map(i => `<div class="bkslot"><b>${SLOT[i]}</b><div class="qfs" data-bs="${i}"></div>
+      <div class="two"><div class="fld"><input data-bk="${i}.a" data-sg="ttd" data-i="${i}" data-k="a" placeholder=" "><label>Judul</label></div><div class="fld"><input data-bk="${i}.b" data-sg="ttd" data-i="${i}" data-k="b" placeholder=" "><label>Jabatan</label></div></div>
+      ${i < 3 ? `<div class="fld"><input data-bk="${i}.n" data-sg="ttd" data-i="${i}" data-k="n" placeholder=" "><label>Nama</label></div>` : ''}</div>`).join('')}</div>
+    <div class="acts end"><button class="btn txt" id="bkNo">Batal</button><button class="btn" id="bkOk">Terapkan ke ${ids.length} surat</button></div>`);
+  const h = histGet().pejabat || [];
+  [0, 1, 2, 3].forEach(i => {
+    const box = document.querySelector(`.qfs[data-bs="${i}"]`), items = i === 3 ? h.filter(p => p.i === 3 && p.fid).slice(0, 1) : h.filter(p => p.i === i && p.n).slice(0, 5);
+    box._items = items;
+    box.innerHTML = items.length ? '<span class="ql">Isi cepat</span>' + items.map((p, k) => `<button type="button" class="qf" data-k="${k}">${ic(i === 3 ? 'pen' : 'user')}<span>${i === 3 ? 'Pakai TTD terakhir' : esc(p.n) + (p.b ? ' · ' + esc(p.b) : '')}</span></button>`).join('') : '';
+  });
+  $('bkNo').onclick = closeSheet;
+  $('bkOk').onclick = async () => {
+    const set = {}; if (BK.jabatan) set.jabatan = BK.jabatan;
+    set.sig = BK.sig.map((g, i) => { const o = { i }; if (g.a) o.a = g.a; if (g.b) o.b = g.b; if (g.n && i < 3) o.n = g.n; if (g.fid) o.fid = g.fid; return o; }).filter(o => Object.keys(o).length > 1);
+    if (!set.jabatan && !set.sig.length) return snack('Belum ada yang diisi');
+    const b = $('bkOk'); b.disabled = true; b.textContent = 'Menerapkan…';
+    try {
+      const r = await api('bulk', { ids: BK.ids, set }); closeSheet(); selMode = false; sel.clear(); BK = null;
+      loadList(true); loadHist(); renderList(); snack(r.n + ' surat diperbarui');
+    } catch (e) { snack('Gagal: ' + e.message); b.disabled = false; b.textContent = 'Terapkan'; }
+  };
+}
+$('bs').addEventListener('input', e => {
+  const t = e.target; if (!BK) return;
+  if (t.id === 'bkJab') BK.jabatan = t.value.trim();
+  else if (t.dataset.bk) { const [i, k] = t.dataset.bk.split('.'); BK.sig[+i][k] = t.value.trim(); if (k === 'n') BK.sig[+i].fid = ''; }
+});
+$('bs').addEventListener('click', e => {
+  const q = e.target.closest('.qfs[data-bs] .qf'); if (!q || !BK) return;
+  const box = q.parentElement, i = +box.dataset.bs, p = box._items[+q.dataset.k]; if (!p) return;
+  const g = BK.sig[i], set = (k, v) => { const el = document.querySelector(`[data-bk="${i}.${k}"]`); if (el) el.value = v; };
+  if (i < 3) { g.a = p.a || ''; g.b = p.b || ''; g.n = p.n || ''; set('a', g.a); set('b', g.b); set('n', g.n); }
+  g.fid = p.fid || '';
+  box.querySelectorAll('.qf').forEach(x => x.classList.toggle('on', x === q));
+});
+$('selEdit').onclick = bulkSheet;
 $('selAll').onclick = () => { if (sel.size === L.length) sel.clear(); else L.forEach(r => sel.add(r.id)); renderList(); };
 $('selPrint').onclick = async () => {
   if (sel.size > 20) return snack('Maksimal 20 surat sekali cetak');
@@ -419,7 +466,7 @@ $('saveBtn').onclick = async () => {
     S = fromServer((await api('get', { id: r.id })).data);
     if (wasNew) ls.del(dk());
     learn(S); loadHist();
-    $('edTitle').textContent = 'Ubah surat'; snack('Tersimpan ke spreadsheet'); loadList(true);
+    loadList(true); goHome(); snack('Tersimpan ke spreadsheet');
   } catch (e) { snack('Gagal menyimpan: ' + e.message + '. Draf aman di HP.'); }
   b.disabled = false; b.textContent = 'Simpan';
 };
