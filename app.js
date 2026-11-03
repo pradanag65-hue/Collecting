@@ -27,6 +27,7 @@ const locs = s => String(s || '').split('\n').map(x => x.trim()).filter(Boolean)
 /* ============ state ============ */
 let cfg = ls.get('st_cfg', {}); if (API_URL) cfg.url = API_URL;
 let ses = ls.get('st_ses', null);
+let selMode = false, sel = new Set(), lp = false, lpT, lpXY = [0, 0];
 let S = null, L = [], R = { m: isoToday().slice(0, 7) }, tab = 'surat', cur = 'login', lgMode = 'in';
 const dk = () => 'st_draft_' + ses.user.username, ck = () => 'st_cache_' + ses.user.username;
 
@@ -45,7 +46,7 @@ function migrate(x) {   // data lama: urutan TTD "Yang diberi tugas" lalu "Pembe
   }
   return x;
 }
-let dt; function saveDraft() { if (!S || !ses) return; clearTimeout(dt); dt = setTimeout(() => ls.set(dk(), S), 300); }
+let dt; function saveDraft() { if (!S || !ses || S.id) return; clearTimeout(dt); dt = setTimeout(() => { if (S && ses && !S.id) ls.set(dk(), S); }, 300); }
 
 /* ============ UI dasar ============ */
 let sbT;
@@ -93,7 +94,7 @@ const VIEWS = ['login', 'home', 'edit', 'prev'];
 function setView(v) {
   cur = v; VIEWS.forEach(x => $('s_' + x).hidden = x !== v);
   document.body.classList.toggle('noNav', v !== 'home');
-  if (v === 'home') { $('hHi').textContent = 'Halo, ' + String(ses.user.nama || '').split(' ')[0]; setTab(tab); }
+  if (v === 'home') setTab(tab);
   if (v === 'edit') fillEditor();
   if (v === 'prev') build();
   window.scrollTo(0, 0);
@@ -106,11 +107,20 @@ window.addEventListener('popstate', e => {
 function setTab(t) {
   tab = t;
   ['surat', 'rekap', 'akun'].forEach(x => { $('tab_' + x).hidden = x !== t; $('n_' + x).classList.toggle('on', x === t); });
-  $('hTitle').textContent = { surat: 'Surat saya', rekap: 'Rekap', akun: 'Akun' }[t];
-  $('fab').hidden = t !== 'surat';
+  if (t !== 'surat') { selMode = false; sel.clear(); }
+  renderHead();
   if (t === 'surat') renderList(); if (t === 'rekap') renderRekap(); if (t === 'akun') renderAkun();
 }
 ['surat', 'rekap', 'akun'].forEach(t => $('n_' + t).onclick = () => setTab(t));
+function renderHead() {
+  $('selBtn').hidden = !(tab === 'surat' && (L.length || selMode));
+  $('selBtn').innerHTML = ic(selMode ? 'x' : 'checks');
+  $('hHi').textContent = selMode ? sel.size + ' dipilih' : 'Halo, ' + String(ses.user.nama || '').split(' ')[0];
+  $('hTitle').textContent = selMode ? 'Pilih surat' : { surat: 'Surat saya', rekap: 'Rekap', akun: 'Akun' }[tab];
+  $('fab').hidden = tab !== 'surat' || selMode;
+  $('selbar').hidden = !selMode;
+  $('selN').textContent = sel.size + ' surat'; $('selPrint').disabled = !sel.size;
+}
 $('edBack').onclick = () => history.back(); $('pvBack').onclick = () => history.back();
 $('edPrev').onclick = () => go('prev');
 $('refBtn').onclick = () => { snack('Memuat…'); loadList(); };
@@ -177,35 +187,68 @@ function renderList() {
   L.forEach(r => {
     const d = parseIso(r.tanggal), key = r.tanggal.slice(0, 7), lk = locs(r.lokasi), m = mins(r);
     if (key !== last) { last = key; html += `<h4 class="grp">${d ? BLN[d.getMonth()] + ' ' + d.getFullYear() : 'Tanpa tanggal'}</h4>`; }
-    html += `<div class="tix" data-o="${esc(r.id)}" role="button" tabindex="0"><div class="stub"><b>${d ? pad(d.getDate()) : '--'}</b><small>${d ? HARI[d.getDay()] : ''}</small></div>
+    html += `<div class="tix${selMode && sel.has(r.id) ? ' sel' : ''}" data-o="${esc(r.id)}" role="button" tabindex="0"><div class="stub"><b>${d ? pad(d.getDate()) : '--'}</b><small>${d ? HARI[d.getDay()] : ''}</small></div>
       <div class="main"><b>${esc(lk.join(' · ') || 'Tanpa lokasi')}</b><span>${esc(tt(r.jam_mulai) || '--:--')} – ${esc(tt(r.jam_selesai) || '--:--')}</span>
       <div class="tags"><span class="tag">${dur(m)}</span><span class="tag">${r.kegiatan} kegiatan</span></div></div>
-      <button class="ib x" data-x="${esc(r.id)}" aria-label="Hapus">${ic('trash')}</button></div>`;
+      ${selMode ? `<span class="cb">${ic('check')}</span>` : `<button class="ib x" data-x="${esc(r.id)}" aria-label="Hapus">${ic('trash')}</button>`}</div>`;
   });
-  $('list').innerHTML = html;
+  $('list').innerHTML = html; renderHead();
 }
 $('list').addEventListener('click', async e => {
+  if (lp) { lp = false; return; }
   const x = e.target.closest('[data-x]'), o = e.target.closest('[data-o]');
+  if (selMode) { if (o) { const id = o.dataset.o; sel.has(id) ? sel.delete(id) : sel.add(id); renderList(); } return; }
   try {
     if (x) {
       e.stopPropagation();
       if (await confirmSheet('Hapus surat ini?', 'Surat beserta foto dan tanda tangannya akan dihapus permanen.', 'Hapus')) {
         await api('delete', { id: x.dataset.x }); L = L.filter(r => r.id !== x.dataset.x); ls.set(ck(), L); renderList(); snack('Surat dihapus');
       }
-    } else if (o) await openRec(o.dataset.o);
+    } else if (o) await openView(o.dataset.o);
   } catch (err) { snack(err.message); }
 });
+/* tekan lama = masuk mode pilih */
+$('list').addEventListener('pointerdown', e => {
+  const o = e.target.closest('[data-o]'); if (!o || selMode || e.target.closest('[data-x]')) return;
+  lpXY = [e.clientX, e.clientY]; clearTimeout(lpT);
+  lpT = setTimeout(() => { lp = true; setTimeout(() => lp = false, 900); sel.clear(); sel.add(o.dataset.o); selMode = true; renderList(); if (navigator.vibrate) navigator.vibrate(15); }, 480);
+});
+$('list').addEventListener('pointermove', e => { if (Math.hypot(e.clientX - lpXY[0], e.clientY - lpXY[1]) > 10) clearTimeout(lpT); });
+['pointerup', 'pointercancel'].forEach(ev => $('list').addEventListener(ev, () => clearTimeout(lpT)));
+$('list').addEventListener('contextmenu', e => { if (e.target.closest('[data-o]')) e.preventDefault(); });
+$('selBtn').onclick = () => { selMode = !selMode; sel.clear(); renderList(); };
+$('selAll').onclick = () => { if (sel.size === L.length) sel.clear(); else L.forEach(r => sel.add(r.id)); renderList(); };
+$('selPrint').onclick = async () => {
+  if (sel.size > 20) return snack('Maksimal 20 surat sekali cetak');
+  const ids = L.filter(r => sel.has(r.id)).sort((a, b) => a.tanggal < b.tanggal ? -1 : a.tanggal > b.tanggal ? 1 : hm(a.jam_mulai) - hm(b.jam_mulai)).map(r => r.id);
+  if (!ids.length) return;
+  const b = $('selPrint'); b.disabled = true;
+  try {
+    const data = [];
+    for (let i = 0; i < ids.length; i += 3) {
+      snack(`Menyiapkan ${Math.min(i + 3, ids.length)} dari ${ids.length} surat…`);
+      data.push(...await Promise.all(ids.slice(i, i + 3).map(id => api('get', { id }).then(r => r.data))));
+    }
+    $('batchPrint').innerHTML = data.map(d => `<div class="paper">${sheetHtml(fromServer(d))}</div>`).join('');
+    $('snack').classList.remove('show'); doPrint('batch');
+  } catch (err) { snack(err.message); }
+  b.disabled = !sel.size;
+};
 $('fab').onclick = () => { S = blank(); saveDraft(); go('edit'); };
 
-async function openRec(id) {
-  snack('Membuka…');
-  const d = (await api('get', { id })).data, b = blank();
-  S = migrate({
+function fromServer(d) {
+  const bl = blank();
+  return migrate({
     id: d.id, nama: d.nama, jabatan: d.jabatan, tgl: String(d.tgl || '').slice(0, 10), j1: tt(d.j1), j2: tt(d.j2), lokasi: d.lokasi || '',
     lap: d.lap.map(l => ({ t: l.t, img: l.img, fid: l.fid, dirty: false })),
-    sig: b.sig.map((def, i) => d.sig[i] ? { a: d.sig[i].a, b: d.sig[i].b, n: d.sig[i].n, img: d.sig[i].img, fid: d.sig[i].fid, dirty: false } : def)
+    sig: bl.sig.map((def, i) => d.sig[i] ? { a: d.sig[i].a, b: d.sig[i].b, n: d.sig[i].n, img: d.sig[i].img, fid: d.sig[i].fid, dirty: false } : def)
   });
-  saveDraft(); $('snack').classList.remove('show'); go('edit');
+}
+/* ketuk surat: langsung tampil siap cetak */
+async function openView(id) {
+  snack('Membuka…');
+  S = fromServer((await api('get', { id })).data);
+  $('snack').classList.remove('show'); go('prev');
 }
 
 /* ============ editor ============ */
@@ -287,36 +330,33 @@ $('saveBtn').onclick = async () => {
     lap: S.lap.map(l => ({ t: l.t, ...m(l) })), sig: S.sig.map(s => ({ a: s.a, b: s.b, n: s.n, ...m(s) }))
   };
   try {
-    const r = await api('save', { data }), d = (await api('get', { id: r.id })).data, bl = blank();
-    S = migrate({
-      id: d.id, nama: d.nama, jabatan: d.jabatan, tgl: String(d.tgl || '').slice(0, 10), j1: tt(d.j1), j2: tt(d.j2), lokasi: d.lokasi || '',
-      lap: d.lap.map(l => ({ t: l.t, img: l.img, fid: l.fid, dirty: false })),
-      sig: bl.sig.map((def, i) => d.sig[i] ? { a: d.sig[i].a, b: d.sig[i].b, n: d.sig[i].n, img: d.sig[i].img, fid: d.sig[i].fid, dirty: false } : def)
-    });
-    saveDraft(); $('edTitle').textContent = 'Ubah surat'; snack('Tersimpan ke spreadsheet'); loadList(true);
+    const wasNew = !S.id, r = await api('save', { data });
+    S = fromServer((await api('get', { id: r.id })).data);
+    if (wasNew) ls.del(dk());
+    $('edTitle').textContent = 'Ubah surat'; snack('Tersimpan ke spreadsheet'); loadList(true);
   } catch (e) { snack('Gagal menyimpan: ' + e.message + '. Draf aman di HP.'); }
   b.disabled = false; b.textContent = 'Simpan';
 };
 
 /* ============ pratinjau & cetak form ============ */
-function build() {
+function sheetHtml(x) {
   const cols = 3, rows = [];
-  for (let i = 0; i < S.lap.length; i += cols) rows.push(S.lap.slice(i, i + cols));
+  for (let i = 0; i < x.lap.length; i += cols) rows.push(x.lap.slice(i, i + cols));
   const tb = rows.map(r => { r = r.slice(); while (r.length < cols) r.push(null);
     return '<tr>' + r.map(l => `<td>${l ? esc(l.t) : ''}</td>`).join('') + '</tr><tr>' + r.map(l => `<td class="ph">${l && l.img ? `<img src="${l.img}">` : ''}</td>`).join('') + '</tr>'; }).join('');
-  const jam = S.j1 || S.j2 ? `${S.j1 || ''} s/d ${S.j2 || ''}` : '';
-  const lk = String(S.lokasi || '').split('\n'); while (lk.length < 3) lk.push('');
-  const sg = S.sig.map((s, i) => `<div><div>${esc(s.a)}&nbsp;</div><div>${esc(s.b)}</div><div class="im">${s.img ? `<img src="${s.img}">` : ''}</div><div class="nm">${esc(i === 3 ? S.nama : s.n) || '&nbsp;'}</div></div>`).join('');
-  $('sheet').innerHTML = `<h1>FORM PENGAMBIL SETORAN</h1>
+  const jam = x.j1 || x.j2 ? `${x.j1 || ''} s/d ${x.j2 || ''}` : '';
+  const lk = String(x.lokasi || '').split('\n'); while (lk.length < 3) lk.push('');
+  const sg = x.sig.map((s, i) => `<div><div>${esc(s.a)}&nbsp;</div><div>${esc(s.b)}</div><div class="im">${s.img ? `<img src="${s.img}">` : ''}</div><div class="nm">${esc(i === 3 ? x.nama : s.n) || '&nbsp;'}</div></div>`).join('');
+  return `<h1>FORM PENGAMBIL SETORAN</h1>
   <div>Yang bertanda tangan di bawah ini :</div>
-  <div class="f"><b>Nama</b>:<span>${esc(S.nama)}</span></div>
-  <div class="f"><b>Jabatan</b>:<span>${esc(S.jabatan)}</span></div>
-  <div class="f"><b>Tanggal</b>:<span>${fmtTgl(S.tgl)}</span></div>
+  <div class="f"><b>Nama</b>:<span>${esc(x.nama)}</span></div>
+  <div class="f"><b>Jabatan</b>:<span>${esc(x.jabatan)}</span></div>
+  <div class="f"><b>Tanggal</b>:<span>${fmtTgl(x.tgl)}</span></div>
   <div class="f"><b>Pukul</b>:<span>${esc(jam)}</span></div>
   <div class="tl">Lokasi :</div>${lk.slice(0, 3).map(v => `<div class="ln">${esc(v)}</div>`).join('')}
   <hr><h2>LAPORAN TUGAS LEMBUR KARYAWAN</h2><table>${tb}</table><div class="sg">${sg}</div>`;
-  fit();
 }
+function build() { $('sheet').innerHTML = sheetHtml(S); fit(); }
 function fit() {
   const w = $('stage').clientWidth - 24, k = Math.min(1, w / $('sheet').offsetWidth);
   $('sheet').style.transform = `scale(${k})`; $('stage').style.height = ($('sheet').offsetHeight * k + 40) + 'px';
@@ -325,6 +365,7 @@ window.addEventListener('resize', () => { if (cur === 'prev') fit(); });
 function doPrint(kind) { document.body.dataset.print = kind; try { window.print(); } catch (e) { snack('Cetak tidak tersedia di browser ini'); } }
 window.addEventListener('afterprint', () => { delete document.body.dataset.print; });
 $('prn').onclick = () => doPrint('form');
+$('pvEdit').onclick = () => go('edit');
 
 /* ============ rekap ============ */
 function monthRows() { return L.filter(r => (r.tanggal || '').slice(0, 7) === R.m).sort((a, b) => a.tanggal < b.tanggal ? -1 : a.tanggal > b.tanggal ? 1 : hm(a.jam_mulai) - hm(b.jam_mulai)); }
@@ -345,7 +386,7 @@ function renderRekap() {
 $('tab_rekap').addEventListener('click', async e => {
   const m = e.target.closest('[data-m]'), o = e.target.closest('[data-o]');
   if (m) { const [y, mo] = R.m.split('-'), d = new Date(+y, +mo - 1 + +m.dataset.m, 1); R.m = `${d.getFullYear()}-${pad(d.getMonth() + 1)}`; renderRekap(); }
-  else if (o) { try { await openRec(o.dataset.o); } catch (err) { snack(err.message); } }
+  else if (o) { try { await openView(o.dataset.o); } catch (err) { snack(err.message); } }
   else if (e.target.closest('#rkPrint')) { buildRekapPrint(); doPrint('rekap'); }
   else if (e.target.closest('#rkCsv')) downloadCsv();
 });
