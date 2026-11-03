@@ -346,7 +346,7 @@ function sheetHtml(x) {
     return '<tr>' + r.map(l => `<td>${l ? esc(l.t) : ''}</td>`).join('') + '</tr><tr>' + r.map(l => `<td class="ph">${l && l.img ? `<img src="${l.img}">` : ''}</td>`).join('') + '</tr>'; }).join('');
   const jam = x.j1 || x.j2 ? `${x.j1 || ''} s/d ${x.j2 || ''}` : '';
   const lk = String(x.lokasi || '').split('\n'); while (lk.length < 3) lk.push('');
-  const sg = x.sig.map((s, i) => `<div><div>${esc(s.a)}&nbsp;</div><div>${esc(s.b)}</div><div class="im">${s.img ? `<img src="${s.img}">` : ''}</div><div class="nm">${esc(i === 3 ? x.nama : s.n) || '&nbsp;'}</div></div>`).join('');
+  const sg = x.sig.map((s, i) => `<div class="sc"><div class="t"><span>${esc(s.a)}</span><span>${esc(s.b)}</span></div><div class="im">${s.img ? `<img src="${s.img}">` : ''}</div><div class="nm">${esc(i === 3 ? x.nama : s.n)}</div></div>`).join('');
   return `<h1>FORM PENGAMBIL SETORAN</h1>
   <div>Yang bertanda tangan di bawah ini :</div>
   <div class="f"><b>Nama</b>:<span>${esc(x.nama)}</span></div>
