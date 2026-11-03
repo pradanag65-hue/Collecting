@@ -31,6 +31,10 @@
 <symbol id="i-out" viewBox="0 0 24 24"><path d="M10 4H5v16h5M15 8l4 4-4 4M19 12H9"/></symbol>
 <symbol id="i-key" viewBox="0 0 24 24"><path d="M7 14a4 4 0 1 1 3.9-5H21v3h-2v3h-3v-3h-5.1A4 4 0 0 1 7 14z"/></symbol>
 <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></symbol>
+<symbol id="i-checks" viewBox="0 0 24 24"><path d="M4 7l2 2 3-3M4 17l2 2 3-3M12 8h8M12 18h8"/></symbol>
+<symbol id="i-pen" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM13 7l4 4"/></symbol>
 <symbol id="i-ref" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></symbol>
 </defs></svg>
 
@@ -62,12 +66,13 @@
 <section id="s_home" class="screen" hidden>
   <header class="hbar">
     <div><p id="hHi" class="hi"></p><h1 id="hTitle">Surat saya</h1></div>
-    <button class="ib" id="refBtn" aria-label="Muat ulang"><svg class="ic"><use href="#i-ref"/></svg></button>
+    <div class="hacts"><button class="ib" id="selBtn" aria-label="Pilih surat untuk dicetak"><svg class="ic"><use href="#i-checks"/></svg></button><button class="ib" id="refBtn" aria-label="Muat ulang"><svg class="ic"><use href="#i-ref"/></svg></button></div>
   </header>
   <div id="tab_surat" class="body"><div id="draftBox"></div><div id="list"></div></div>
   <div id="tab_rekap" class="body" hidden></div>
   <div id="tab_akun" class="body" hidden></div>
   <button class="fab" id="fab"><svg class="ic"><use href="#i-plus"/></svg><span>Buat form</span></button>
+  <div class="selbar" id="selbar" hidden><span id="selN">0 surat</span><button class="chip" id="selAll">Semua</button><button class="btn sm acc" id="selPrint"><svg class="ic"><use href="#i-print"/></svg>Cetak</button></div>
   <nav class="nav" aria-label="Menu utama">
     <button id="n_surat" class="on"><i><svg class="ic"><use href="#i-doc"/></svg></i>Surat</button>
     <button id="n_rekap"><i><svg class="ic"><use href="#i-chart"/></svg></i>Rekap</button>
@@ -110,13 +115,15 @@
 <section id="s_prev" class="screen" hidden>
   <header class="appbar">
     <button class="ib" id="pvBack" aria-label="Kembali"><svg class="ic"><use href="#i-back"/></svg></button>
-    <h2>Pratinjau</h2>
+    <h2>Siap cetak</h2>
+    <button class="ib" id="pvEdit" aria-label="Ubah surat"><svg class="ic"><use href="#i-pen"/></svg></button>
     <button class="btn sm acc" id="prn"><svg class="ic"><use href="#i-print"/></svg>Cetak</button>
   </header>
-  <div class="stage" id="stage"><div id="sheet"></div></div>
+  <div class="stage" id="stage"><div id="sheet" class="paper"></div></div>
 </section>
 
 <div id="rekapPrint"></div>
+<div id="batchPrint"></div>
 <script src="app.js"></script>
 </body>
 </html>
