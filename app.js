@@ -354,7 +354,7 @@ function sheetHtml(x) {
   <div class="f"><b>Tanggal</b>:<span>${fmtTgl(x.tgl)}</span></div>
   <div class="f"><b>Pukul</b>:<span>${esc(jam)}</span></div>
   <div class="tl">Lokasi :</div>${lk.slice(0, 3).map(v => `<div class="ln">${esc(v)}</div>`).join('')}
-  <hr><h2>LAPORAN TUGAS LEMBUR KARYAWAN</h2><table>${tb}</table><div class="sg">${sg}</div>`;
+  <hr><h2>LAPORAN PENGAMBILAN SETORAN</h2><table>${tb}</table><div class="sg">${sg}</div>`;
 }
 function build() { $('sheet').innerHTML = sheetHtml(S); fit(); }
 function fit() {
