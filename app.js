@@ -347,7 +347,7 @@ function sheetHtml(x) {
   const jam = x.j1 || x.j2 ? `${x.j1 || ''} s/d ${x.j2 || ''}` : '';
   const lk = String(x.lokasi || '').split('\n'); while (lk.length < 3) lk.push('');
   const sg = x.sig.map((s, i) => `<div class="sc"><div class="t"><span>${esc(s.a)}</span><span>${esc(s.b)}</span></div><div class="im">${s.img ? `<img src="${s.img}">` : ''}</div><div class="nm">${esc(i === 3 ? x.nama : s.n)}</div></div>`).join('');
-  return `<h1>FORM PENGAMBIL SETORAN</h1>
+  return `<h1>FORM PENGAMBILAN SETORAN</h1>
   <div>Yang bertanda tangan di bawah ini :</div>
   <div class="f"><b>Nama</b>:<span>${esc(x.nama)}</span></div>
   <div class="f"><b>Jabatan</b>:<span>${esc(x.jabatan)}</span></div>
