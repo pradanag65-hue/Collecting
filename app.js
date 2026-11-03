@@ -17,7 +17,8 @@ const BLN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Ag
 const BLNS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 const HARI = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 const parseIso = s => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || ''); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; };
-const fmtTgl = v => { const d = parseIso(v); return d ? `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}` : ''; };
+const HARI_P = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+const fmtTgl = v => { const d = parseIso(v); return d ? `${HARI_P[d.getDay()]}, ${d.getDate()} ${BLN[d.getMonth()]} ${d.getFullYear()}` : ''; };
 const hm = s => { const m = /(\d{1,2}):(\d{2})/.exec(s || ''); return m ? +m[1] * 60 + +m[2] : null; };
 const tt = s => { const m = /(\d{1,2}):(\d{2})/.exec(s || ''); return m ? pad(+m[1]) + ':' + m[2] : ''; };
 const mins = r => { const a = hm(r.jam_mulai), b = hm(r.jam_selesai); if (a == null || b == null) return 0; let d = b - a; if (d < 0) d += 1440; return d; };
