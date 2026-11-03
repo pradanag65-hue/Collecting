@@ -345,7 +345,7 @@ function sheetHtml(x) {
   const tb = rows.map(r => { r = r.slice(); while (r.length < cols) r.push(null);
     return '<tr>' + r.map(l => `<td>${l ? esc(l.t) : ''}</td>`).join('') + '</tr><tr>' + r.map(l => `<td class="ph">${l && l.img ? `<img src="${l.img}">` : ''}</td>`).join('') + '</tr>'; }).join('');
   const jam = x.j1 || x.j2 ? `${x.j1 || ''} s/d ${x.j2 || ''}` : '';
-  const lk = String(x.lokasi || '').split('\n'); while (lk.length < 3) lk.push('');
+  const lk = locs(x.lokasi).slice(0, 3); while (lk.length < 3) lk.push('');   // terisi dirapatkan dulu, lalu dinomori berurutan
   const row = f => '<tr>' + x.sig.map(f).join('') + '</tr>';
   const sg = '<table class="sgt">'
     + row(g => `<td class="st"><div>${esc(g.a)}</div><div class="jb">${esc(g.b)}</div></td>`)
@@ -357,7 +357,7 @@ function sheetHtml(x) {
   <div class="f"><b>Jabatan</b>:<span>${esc(x.jabatan)}</span></div>
   <div class="f"><b>Tanggal</b>:<span>${fmtTgl(x.tgl)}</span></div>
   <div class="f"><b>Pukul</b>:<span>${esc(jam)}</span></div>
-  <div class="tl">Lokasi :</div>${lk.slice(0, 3).map(v => `<div class="ln">${esc(v)}</div>`).join('')}
+  <div class="tl">Lokasi :</div>${lk.map((v, i) => `<div class="ln"><span class="no">${i + 1}.</span><span class="v">${esc(v)}</span></div>`).join('')}
   <hr><h2>LAPORAN PENGAMBILAN SETORAN</h2><table>${tb}</table>${sg}`;
 }
 function build() { $('sheet').innerHTML = sheetHtml(S); fit(); }
