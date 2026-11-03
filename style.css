@@ -152,6 +152,10 @@ canvas.pad{width:100%;height:130px;background:#fff;border:1.5px dashed var(--lin
 .qfs::-webkit-scrollbar{display:none}.qfs:empty{display:none}
 .ql{flex:none;align-self:center;font-size:12px;font-weight:700;color:var(--mut)}
 .qf{flex:none;display:inline-flex;align-items:center;gap:6px;max-width:82vw;height:34px;padding:0 14px 0 10px;border:0;border-radius:17px;background:var(--acc);color:var(--on-acc);font:700 13px "Plus Jakarta Sans",sans-serif;cursor:pointer}
+.qf.on{box-shadow:inset 0 0 0 2.5px var(--on-acc)}
+.bkbody{max-height:56vh;overflow-y:auto;margin:0 -8px;padding:0 8px 6px}
+.bkslot{margin-top:18px;padding-top:12px;border-top:1px solid var(--line)}
+.bkslot>b{font-weight:800}
 .qf .ic{width:16px;height:16px}.qf span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sug span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
