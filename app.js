@@ -346,15 +346,15 @@ function sheetHtml(x) {
     return '<tr>' + r.map(l => `<td>${l ? esc(l.t) : ''}</td>`).join('') + '</tr><tr>' + r.map(l => `<td class="ph">${l && l.img ? `<img src="${l.img}">` : ''}</td>`).join('') + '</tr>'; }).join('');
   const jam = x.j1 || x.j2 ? `${x.j1 || ''} s/d ${x.j2 || ''}` : '';
   const lk = String(x.lokasi || '').split('\n'); while (lk.length < 3) lk.push('');
-  const sg = x.sig.map((s, i) => `<div class="sc"><div class="t"><span>${esc(s.a)}</span><span>${esc(s.b)}</span></div><div class="im">${s.img ? `<img src="${s.img}">` : ''}</div><div class="nm">${esc(i === 3 ? x.nama : s.n)}</div></div>`).join('');
-  return `<h1>FORM PENGAMBILAN SETORAN</h1>
+  const sg = x.sig.map((s, i) => `<div class="sc" style="--c:${i + 1}"><div class="t"><span>${esc(s.a)}</span><span>${esc(s.b)}</span></div><div class="im">${s.img ? `<img src="${s.img}">` : ''}</div><div class="nm">${esc(i === 3 ? x.nama : s.n)}</div></div>`).join('');
+  return `<h1>FORM PENGAMBIL SETORAN</h1>
   <div>Yang bertanda tangan di bawah ini :</div>
   <div class="f"><b>Nama</b>:<span>${esc(x.nama)}</span></div>
   <div class="f"><b>Jabatan</b>:<span>${esc(x.jabatan)}</span></div>
   <div class="f"><b>Tanggal</b>:<span>${fmtTgl(x.tgl)}</span></div>
   <div class="f"><b>Pukul</b>:<span>${esc(jam)}</span></div>
   <div class="tl">Lokasi :</div>${lk.slice(0, 3).map(v => `<div class="ln">${esc(v)}</div>`).join('')}
-  <hr><h2>LAPORAN PENGAMBILAN SETORAN</h2><table>${tb}</table><div class="sg">${sg}</div>`;
+  <hr><h2>LAPORAN TUGAS LEMBUR KARYAWAN</h2><table>${tb}</table><div class="sg">${sg}</div>`;
 }
 function build() { $('sheet').innerHTML = sheetHtml(S); fit(); }
 function fit() {
