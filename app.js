@@ -47,6 +47,87 @@ function migrate(x) {   // data lama: urutan TTD "Yang diberi tugas" lalu "Pembe
   }
   return x;
 }
+/* ============ riwayat isian (saran) ============ */
+let H = null;
+const hk = () => 'st_hist_' + ses.user.username;
+const histDef = () => ({ lokasi: [], jabatan: [], kegiatan: [], pejabat: [], ttd: [0, 1, 2, 3].map(() => ({ a: [], b: [], n: [] })) });
+function histGet() { if (!H) H = Object.assign(histDef(), ls.get(hk(), {})); return H; }
+async function loadHist() {
+  if (!ses) return;
+  try { H = Object.assign(histDef(), (await api('riwayat')).data); ls.set(hk(), H); if (cur === 'edit' && S) S.sig.forEach((_, i) => renderQf(i)); } catch (e) {}
+}
+/* isi cepat pejabat: satu ketukan mengisi nama + jabatan + tanda tangan */
+let simg = null; const simgK = () => 'st_simg_' + ses.user.username;
+async function sigImg(fid) {
+  simg = simg || ls.get(simgK(), {});
+  if (simg[fid]) return simg[fid];
+  try {
+    const r = await api('img', { fid });
+    if (r.img) { simg[fid] = r.img; const ks = Object.keys(simg); while (ks.length > 12) delete simg[ks.shift()]; ls.set(simgK(), simg); return r.img; }
+  } catch (e) {}
+  return '';
+}
+const nz = v => String(v || '').trim().toLowerCase();
+function renderQf(i) {
+  const box = document.querySelector(`.qfs[data-ps="${i}"]`); if (!box || !S || !S.sig[i]) return;
+  const s = S.sig[i], h = histGet().pejabat || [];
+  const items = (i === 3 ? h.filter(p => p.i === 3 && p.fid).slice(0, 1)
+    : h.filter(p => p.i === i && p.n && !(nz(p.n) === nz(s.n) && nz(p.b) === nz(s.b))).slice(0, 5));
+  box._items = items;
+  box.innerHTML = items.length ? '<span class="ql">Isi cepat</span>' + items.map((p, k) =>
+    `<button type="button" class="qf" data-k="${k}">${ic(i === 3 ? 'pen' : 'user')}<span>${i === 3 ? 'Pakai TTD terakhir' : esc(p.n) + (p.b ? ' · ' + esc(p.b) : '')}</span></button>`).join('') : '';
+}
+async function applyQf(i, k) {
+  const box = document.querySelector(`.qfs[data-ps="${i}"]`), p = box && box._items && box._items[k]; if (!p) return;
+  const s = S.sig[i]; let img = '';
+  if (p.fid) {
+    snack('Mengambil tanda tangan…'); img = await sigImg(p.fid); $('snack').classList.remove('show');
+    if (!img) snack('Tanda tangan belum terambil (offline?)' + (i < 3 ? ', nama tetap terisi' : ''));
+  }
+  if (i === 3) { if (!img) return; } else { s.n = p.n; s.b = p.b; if (p.a) s.a = p.a; }
+  s.img = img; s.dirty = true; saveDraft(); renderSig();
+}
+function front(arr, v) {
+  v = String(v || '').trim(); if (!v) return;
+  const k = v.toLowerCase(), i = arr.findIndex(x => x.toLowerCase() === k);
+  if (i >= 0) arr.splice(i, 1); arr.unshift(v); if (arr.length > 60) arr.length = 60;
+}
+function learn(x) {
+  const h = histGet();
+  locs(x.lokasi).forEach(v => front(h.lokasi, v)); front(h.jabatan, x.jabatan); x.lap.forEach(l => front(h.kegiatan, l.t));
+  x.sig.forEach((g, i) => { if (!h.ttd[i]) return; front(h.ttd[i].a, g.a); front(h.ttd[i].b, g.b); if (i !== 3) front(h.ttd[i].n, g.n); });
+  ls.set(hk(), h);
+}
+function sgList(t) {
+  const h = histGet(), k = t.dataset.sg;
+  if (k === 'lokasi') return h.lokasi; if (k === 'jabatan') return h.jabatan; if (k === 'kegiatan') return h.kegiatan;
+  if (k === 'ttd') { const o = h.ttd[+t.dataset.i]; return o ? o[t.dataset.k] || [] : []; }
+  return [];
+}
+function showSg(e) {
+  const t = e.target; if (!ses || !t.dataset || !t.dataset.sg) return;
+  const q = t.value.trim().toLowerCase(), used = new Set();
+  if (t.dataset.sg === 'lokasi') document.querySelectorAll('.lk').forEach(el => { if (el !== t) used.add(el.value.trim().toLowerCase()); });
+  const items = sgList(t).filter(v => { const l = v.toLowerCase(); return l !== q && !used.has(l) && (!q || l.includes(q)); }).slice(0, 8);
+  const fld = t.closest('.fld'); if (!fld) return;
+  let box = fld.nextElementSibling;
+  if (!box || !box.classList.contains('sugs')) { box = document.createElement('div'); box.className = 'sugs'; fld.after(box); }
+  box.innerHTML = items.map(v => `<button type="button" class="sug">${ic('hist')}<span>${esc(v)}</span></button>`).join('');
+  box.hidden = !items.length; box._t = t;
+}
+document.addEventListener('focusin', showSg);
+document.addEventListener('input', showSg);
+document.addEventListener('focusout', e => {
+  const f = e.target.closest && e.target.closest('.fld'); if (!f) return;
+  setTimeout(() => { const b = f.nextElementSibling; if (b && b.classList.contains('sugs') && document.activeElement !== e.target) b.hidden = true; }, 220);
+});
+['pointerdown', 'mousedown'].forEach(ev => document.addEventListener(ev, e => { if (e.target.closest('.sugs')) e.preventDefault(); }, true));
+document.addEventListener('click', e => {
+  const c = e.target.closest('.sug'); if (!c) return;
+  const box = c.parentElement, t = box._t; if (!t) return;
+  t.value = c.querySelector('span').textContent; t.dispatchEvent(new Event('input', { bubbles: true })); box.hidden = true;
+});
+
 let dt; function saveDraft() { if (!S || !ses || S.id) return; clearTimeout(dt); dt = setTimeout(() => { if (S && ses && !S.id) ls.set(dk(), S); }, 300); }
 
 /* ============ UI dasar ============ */
@@ -124,7 +205,7 @@ function renderHead() {
 }
 $('edBack').onclick = () => history.back(); $('pvBack').onclick = () => history.back();
 $('edPrev').onclick = () => go('prev');
-$('refBtn').onclick = () => { snack('Memuat…'); loadList(); };
+$('refBtn').onclick = () => { snack('Memuat…'); loadList(); loadHist(); };
 
 /* ============ masuk / daftar ============ */
 function setMode(m) {
@@ -151,11 +232,11 @@ $('lgPass').addEventListener('keydown', e => { if (e.key === 'Enter') $('lgGo').
 function startSession(r) {
   ses = { token: r.token, user: r.user }; ls.set('st_ses', ses);
   ['lgUser', 'lgPass', 'upNama', 'upJab', 'upKode'].forEach(i => $(i).value = '');
-  L = ls.get(ck(), []); tab = 'surat'; S = null;
-  history.replaceState({ v: 'home' }, ''); setView('home'); loadList(true);
+  L = ls.get(ck(), []); tab = 'surat'; S = null; H = null;
+  history.replaceState({ v: 'home' }, ''); setView('home'); loadList(true); loadHist();
 }
 function logout() {
-  ses = null; S = null; L = []; ls.del('st_ses'); setMode('in'); history.replaceState({ v: 'login' }, ''); setView('login');
+  ses = null; S = null; L = []; H = null; ls.del('st_ses'); setMode('in'); history.replaceState({ v: 'login' }, ''); setView('login');
 }
 function serverSheet() {
   openSheet(`<h3>Alamat server</h3><p class="mut">URL Web App Apps Script (berakhiran /exec).</p>
@@ -280,7 +361,7 @@ function compress(file, cb) {
 }
 function renderLap() {
   $('lap').innerHTML = S.lap.map((l, i) => `<div class="kg"><div class="kgh"><span class="num">${i + 1}</span><b>Kegiatan</b><button class="ib" data-a="dl" data-i="${i}" aria-label="Hapus kegiatan">${ic('trash')}</button></div>
-    <div class="fld"><textarea class="lt" data-i="${i}" rows="2" placeholder=" ">${esc(l.t)}</textarea><label>Uraian kegiatan</label></div>
+    <div class="fld"><textarea class="lt" data-sg="kegiatan" data-i="${i}" rows="2" placeholder=" ">${esc(l.t)}</textarea><label>Uraian kegiatan</label></div>
     ${l.img ? `<img src="${l.img}" alt="Foto kegiatan ${i + 1}"><div class="chips"><label class="chip">Ganti foto<input type="file" accept="image/*" class="lf" data-i="${i}" hidden></label><button class="chip" data-a="rf" data-i="${i}">Hapus foto</button></div>`
       : `<label class="photo">${ic('camera')}Ambil atau pilih foto<input type="file" accept="image/*" class="lf" data-i="${i}" hidden></label>`}</div>`).join('');
 }
@@ -300,13 +381,16 @@ $('addL').onclick = () => { S.lap.push({ t: '', img: '', fid: '', dirty: false }
 
 function renderSig() {
   $('sig').innerHTML = S.sig.map((s, i) => `<div class="sgh">${esc(s.a || s.b || 'Tanda tangan ' + (i + 1))}<small>${esc(s.a && s.b ? s.b : '')}</small></div>
-    <div class="two"><div class="fld"><input data-i="${i}" data-k="a" value="${esc(s.a)}" placeholder=" "><label>Judul</label></div><div class="fld"><input data-i="${i}" data-k="b" value="${esc(s.b)}" placeholder=" "><label>Jabatan</label></div></div>
-    ${i === 3 ? '<p class="hint" style="margin-top:8px">Nama otomatis dari kolom Nama.</p>' : `<div class="fld"><input data-i="${i}" data-k="n" value="${esc(s.n)}" placeholder=" "><label>Nama</label></div>`}
+    <div class="qfs" data-ps="${i}"></div>
+    <div class="two"><div class="fld"><input data-i="${i}" data-k="a" data-sg="ttd" value="${esc(s.a)}" placeholder=" "><label>Judul</label></div><div class="fld"><input data-i="${i}" data-k="b" data-sg="ttd" value="${esc(s.b)}" placeholder=" "><label>Jabatan</label></div></div>
+    ${i === 3 ? '<p class="hint" style="margin-top:8px">Nama otomatis dari kolom Nama.</p>' : `<div class="fld"><input data-i="${i}" data-k="n" data-sg="ttd" value="${esc(s.n)}" placeholder=" "><label>Nama</label></div>`}
     <canvas class="pad" data-i="${i}"></canvas><div class="acts" style="margin-top:8px"><button class="chip" data-c="${i}">Hapus tanda tangan</button></div>`).join('');
   document.querySelectorAll('canvas.pad').forEach(initPad);
+  S.sig.forEach((_, i) => renderQf(i));
 }
 $('sig').addEventListener('input', e => { const t = e.target; if (t.dataset.k) { S.sig[t.dataset.i][t.dataset.k] = t.value; saveDraft(); } });
 $('sig').addEventListener('click', e => {
+  const q = e.target.closest('.qf'); if (q) { applyQf(+q.parentElement.dataset.ps, +q.dataset.k); return; }
   const b = e.target.closest('button[data-c]'); if (!b) return;
   const s = S.sig[b.dataset.c]; s.img = ''; s.dirty = true; saveDraft(); renderSig();
 });
@@ -334,6 +418,7 @@ $('saveBtn').onclick = async () => {
     const wasNew = !S.id, r = await api('save', { data });
     S = fromServer((await api('get', { id: r.id })).data);
     if (wasNew) ls.del(dk());
+    learn(S); loadHist();
     $('edTitle').textContent = 'Ubah surat'; snack('Tersimpan ke spreadsheet'); loadList(true);
   } catch (e) { snack('Gagal menyimpan: ' + e.message + '. Draf aman di HP.'); }
   b.disabled = false; b.textContent = 'Simpan';
@@ -359,7 +444,7 @@ function sheetHtml(x) {
   <div class="f"><b>Tanggal</b>:<span>${fmtTgl(x.tgl)}</span></div>
   <div class="f"><b>Pukul</b>:<span>${esc(jam)}</span></div>
   <div class="tl">Lokasi :</div>${lk.map((v, i) => `<div class="ln"><span class="no">${i + 1}.</span><span class="v">${esc(v)}</span></div>`).join('')}
-  <hr><h2>LAPORAN PENGAMBILAN SETORAN</h2><table>${tb}</table>${sg}`;
+  <hr><h2>LAPORAN TUGAS LEMBUR KARYAWAN</h2><table>${tb}</table>${sg}`;
 }
 function build() { $('sheet').innerHTML = sheetHtml(S); fit(); }
 function fit() {
@@ -438,7 +523,7 @@ function renderAkun() {
 /* ============ mulai ============ */
 (function boot() {
   setMode('in');
-  if (ses && cfg.url) { L = ls.get(ck(), []); history.replaceState({ v: 'home' }, ''); setView('home'); loadList(true); }
+  if (ses && cfg.url) { L = ls.get(ck(), []); history.replaceState({ v: 'home' }, ''); setView('home'); loadList(true); loadHist(); }
   else { ses = null; history.replaceState({ v: 'login' }, ''); setView('login'); }
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 })();
