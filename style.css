@@ -163,7 +163,9 @@ canvas.pad{width:100%;height:130px;background:#fff;border:1.5px dashed var(--lin
 .paper h1{text-align:center;font:700 20px/1.25 Arial,Helvetica,sans-serif;margin:2mm 0 12mm;letter-spacing:.03em}
 .paper .f{display:flex;margin:2mm 0 0}.f b{font-weight:400;width:32mm}.f span{flex:1;border-bottom:1px solid #666;padding:0 2mm 1px;min-height:5mm}
 .paper .tl{margin:6mm 0 2mm}
-.paper .ln{border-bottom:1px solid #666;min-height:7mm;padding:1mm 3mm;white-space:pre-wrap}
+.paper .ln{display:flex;border-bottom:1px solid #666;min-height:7mm;padding:1mm 3mm;white-space:pre-wrap}
+.paper .ln .no{flex:none;width:7mm}
+.paper .ln .v{flex:1;overflow-wrap:anywhere}
 .paper hr{border:0;border-top:1px solid #999;margin:9mm -14mm 6mm}
 .paper h2{font:700 14px Arial,Helvetica,sans-serif;margin:0 0 3mm;padding:0}
 .paper table{width:100%;border-collapse:collapse;table-layout:fixed}
