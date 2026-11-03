@@ -484,7 +484,7 @@ function sheetHtml(x) {
     + row(g => `<td class="st"><div>${esc(g.a)}</div><div class="jb">${esc(g.b)}</div></td>`)
     + row(g => `<td class="si">${g.img ? `<img src="${g.img}">` : ''}</td>`)
     + row((g, i) => `<td class="sn">${esc(i === 3 ? x.nama : g.n)}</td>`) + '</table>';
-  return `<h1>FORM PENGAMBIL SETORAN</h1>
+  return `<h1>FORM PENGAMBILAN SETORAN</h1>
   <div>Yang bertanda tangan di bawah ini :</div>
   <div class="f"><b>Nama</b>:<span>${esc(x.nama)}</span></div>
   <div class="f"><b>Jabatan</b>:<span>${esc(x.jabatan)}</span></div>
