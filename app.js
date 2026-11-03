@@ -491,7 +491,7 @@ function sheetHtml(x) {
   <div class="f"><b>Tanggal</b>:<span>${fmtTgl(x.tgl)}</span></div>
   <div class="f"><b>Pukul</b>:<span>${esc(jam)}</span></div>
   <div class="tl">Lokasi :</div>${lk.map((v, i) => `<div class="ln"><span class="no">${i + 1}.</span><span class="v">${esc(v)}</span></div>`).join('')}
-  <hr><h2>LAPORAN TUGAS LEMBUR KARYAWAN</h2><table>${tb}</table>${sg}`;
+  <hr><h2>LAPORAN PENGAMBILAN SETORAN</h2><table>${tb}</table>${sg}`;
 }
 function build() { $('sheet').innerHTML = sheetHtml(S); fit(); }
 function fit() {
@@ -529,7 +529,7 @@ $('tab_rekap').addEventListener('click', async e => {
 });
 function buildRekapPrint() {
   const rows = monthRows(), tot = rows.reduce((a, r) => a + mins(r), 0), keg = rows.reduce((a, r) => a + (+r.kegiatan || 0), 0);
-  $('rekapPrint').innerHTML = `<h1>REKAP FORM PENGAMBIL SETORAN</h1>
+  $('rekapPrint').innerHTML = `<h1>REKAP FORM PENGAMBILAN SETORAN</h1>
   <div class="f"><b>Periode</b>:&nbsp;${monthLabel()}</div><div class="f"><b>Nama</b>:&nbsp;${esc(ses.user.nama)}</div><div class="f"><b>Jabatan</b>:&nbsp;${esc(ses.user.jabatan || '')}</div>
   <table><colgroup><col style="width:9mm"><col style="width:27mm"><col style="width:27mm"><col style="width:17mm"><col><col style="width:17mm"></colgroup>
   <thead><tr><th>No</th><th>Tanggal</th><th>Pukul</th><th>Durasi</th><th>Lokasi</th><th>Kegiatan</th></tr></thead>
