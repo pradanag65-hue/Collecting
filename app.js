@@ -347,6 +347,16 @@ $('bs').addEventListener('click', e => {
 });
 $('selEdit').onclick = bulkSheet;
 $('selAll').onclick = () => { if (sel.size === L.length) sel.clear(); else L.forEach(r => sel.add(r.id)); renderList(); };
+const imgMissing = d => d.lap.filter(l => l.fid && !l.img).length + d.sig.filter(g => g.fid && !g.img).length;
+async function fetchFull(id) {   // ulangi bila ada foto/TTD yang belum terbawa
+  let d;
+  for (let t = 0; t < 3; t++) {
+    d = (await api('get', { id })).data;
+    if (!imgMissing(d)) return d;
+    await new Promise(r => setTimeout(r, 700));
+  }
+  return d;
+}
 $('selPrint').onclick = async () => {
   if (sel.size > 20) return snack('Maksimal 20 surat sekali cetak');
   const ids = L.filter(r => sel.has(r.id)).sort((a, b) => a.tanggal < b.tanggal ? -1 : a.tanggal > b.tanggal ? 1 : hm(a.jam_mulai) - hm(b.jam_mulai)).map(r => r.id);
@@ -354,13 +364,20 @@ $('selPrint').onclick = async () => {
   const b = $('selPrint'); b.disabled = true;
   try {
     const data = [];
-    for (let i = 0; i < ids.length; i += 3) {
-      snack(`Menyiapkan ${Math.min(i + 3, ids.length)} dari ${ids.length} surat…`);
-      data.push(...await Promise.all(ids.slice(i, i + 3).map(id => api('get', { id }).then(r => r.data))));
+    for (let i = 0; i < ids.length; i += 2) {
+      snack(`Menyiapkan ${Math.min(i + 2, ids.length)} dari ${ids.length} surat…`);
+      data.push(...await Promise.all(ids.slice(i, i + 2).map(fetchFull)));
     }
+    const miss = data.reduce((n, d) => n + imgMissing(d), 0);
+    $('snack').classList.remove('show');
+    if (miss && !await confirmSheet('Ada gambar yang belum terambil', miss + ' foto atau tanda tangan gagal diambil dari Drive. Cetak tetap dilanjutkan?', 'Tetap cetak')) { b.disabled = !sel.size; return; }
     $('batchPrint').innerHTML = data.map(d => `<div class="paper">${sheetHtml(fromServer(d))}</div>`).join('');
-    $('snack').classList.remove('show'); doPrint('batch');
-  } catch (err) { snack(err.message); }
+    document.body.dataset.print = 'batch';   // tampilkan dulu agar gambar benar-benar dimuat
+    const imgs = [...document.querySelectorAll('#batchPrint img')];
+    await Promise.all(imgs.map(im => im.decode ? im.decode().catch(() => {}) : (im.complete ? 0 : new Promise(r => { im.onload = im.onerror = r; }))));
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 250))));
+    window.print();
+  } catch (err) { delete document.body.dataset.print; snack(err.message); }
   b.disabled = !sel.size;
 };
 $('fab').onclick = () => { S = blank(); saveDraft(); go('edit'); };
@@ -484,14 +501,14 @@ function sheetHtml(x) {
     + row(g => `<td class="st"><div>${esc(g.a)}</div><div class="jb">${esc(g.b)}</div></td>`)
     + row(g => `<td class="si">${g.img ? `<img src="${g.img}">` : ''}</td>`)
     + row((g, i) => `<td class="sn">${esc(i === 3 ? x.nama : g.n)}</td>`) + '</table>';
-  return `<h1>FORM PENGAMBILAN SETORAN</h1>
+  return `<h1>FORM PENGAMBIL SETORAN</h1>
   <div>Yang bertanda tangan di bawah ini :</div>
   <div class="f"><b>Nama</b>:<span>${esc(x.nama)}</span></div>
   <div class="f"><b>Jabatan</b>:<span>${esc(x.jabatan)}</span></div>
   <div class="f"><b>Tanggal</b>:<span>${fmtTgl(x.tgl)}</span></div>
   <div class="f"><b>Pukul</b>:<span>${esc(jam)}</span></div>
   <div class="tl">Lokasi :</div>${lk.map((v, i) => `<div class="ln"><span class="no">${i + 1}.</span><span class="v">${esc(v)}</span></div>`).join('')}
-  <hr><h2>LAPORAN PENGAMBILAN SETORAN</h2><table>${tb}</table>${sg}`;
+  <hr><h2>LAPORAN TUGAS LEMBUR KARYAWAN</h2><table>${tb}</table>${sg}`;
 }
 function build() { $('sheet').innerHTML = sheetHtml(S); fit(); }
 function fit() {
@@ -529,7 +546,7 @@ $('tab_rekap').addEventListener('click', async e => {
 });
 function buildRekapPrint() {
   const rows = monthRows(), tot = rows.reduce((a, r) => a + mins(r), 0), keg = rows.reduce((a, r) => a + (+r.kegiatan || 0), 0);
-  $('rekapPrint').innerHTML = `<h1>REKAP FORM PENGAMBILAN SETORAN</h1>
+  $('rekapPrint').innerHTML = `<h1>REKAP FORM PENGAMBIL SETORAN</h1>
   <div class="f"><b>Periode</b>:&nbsp;${monthLabel()}</div><div class="f"><b>Nama</b>:&nbsp;${esc(ses.user.nama)}</div><div class="f"><b>Jabatan</b>:&nbsp;${esc(ses.user.jabatan || '')}</div>
   <table><colgroup><col style="width:9mm"><col style="width:27mm"><col style="width:27mm"><col style="width:17mm"><col><col style="width:17mm"></colgroup>
   <thead><tr><th>No</th><th>Tanggal</th><th>Pukul</th><th>Durasi</th><th>Lokasi</th><th>Kegiatan</th></tr></thead>
