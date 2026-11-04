@@ -501,14 +501,14 @@ function sheetHtml(x) {
     + row(g => `<td class="st"><div>${esc(g.a)}</div><div class="jb">${esc(g.b)}</div></td>`)
     + row(g => `<td class="si">${g.img ? `<img src="${g.img}">` : ''}</td>`)
     + row((g, i) => `<td class="sn">${esc(i === 3 ? x.nama : g.n)}</td>`) + '</table>';
-  return `<h1>FORM PENGAMBIL SETORAN</h1>
+  return `<h1>FORM PENGAMBILAN SETORAN</h1>
   <div>Yang bertanda tangan di bawah ini :</div>
   <div class="f"><b>Nama</b>:<span>${esc(x.nama)}</span></div>
   <div class="f"><b>Jabatan</b>:<span>${esc(x.jabatan)}</span></div>
   <div class="f"><b>Tanggal</b>:<span>${fmtTgl(x.tgl)}</span></div>
   <div class="f"><b>Pukul</b>:<span>${esc(jam)}</span></div>
   <div class="tl">Lokasi :</div>${lk.map((v, i) => `<div class="ln"><span class="no">${i + 1}.</span><span class="v">${esc(v)}</span></div>`).join('')}
-  <hr><h2>LAPORAN TUGAS LEMBUR KARYAWAN</h2><table>${tb}</table>${sg}`;
+  <hr><h2>LAPORAN PENGAMBILAN SETORAN</h2><table>${tb}</table>${sg}`;
 }
 function build() { $('sheet').innerHTML = sheetHtml(S); fit(); }
 function fit() {
