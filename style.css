@@ -80,6 +80,15 @@ h1,h2,h3,h4,p{margin:0}
 .tix .main b{display:block;font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tix .main span{display:block;font-size:13px;color:var(--mut);margin-top:2px}
 .tix .main .tags{display:flex;gap:6px;margin-top:8px}
+.fchips{display:flex;gap:8px;overflow-x:auto;margin:0 0 6px;padding:2px 0;scrollbar-width:none}
+.fchips::-webkit-scrollbar{display:none}.fchips:empty{display:none}
+.chip.f{flex:none;height:34px;padding:0 14px;border-radius:17px}
+.chip.f.on{background:var(--pri);border-color:var(--pri);color:var(--on-pri)}
+.tag.ok{background:#d7f0dd;color:#0d5c24}.tag.warn{background:#ffe7b3;color:#6b4300}.tag.no{background:#ffd9d4;color:#8a1f12}
+@media (prefers-color-scheme:dark){.tag.ok{background:#173a22;color:#8fe0a6}.tag.warn{background:#4a3708;color:#ffd27a}.tag.no{background:#4d1d18;color:#ffb4a8}}
+.tag .ic{width:13px;height:13px;stroke-width:3;margin-right:3px}
+.tix .main .tags{flex-wrap:wrap}
+.rr .mis{color:var(--danger);font-weight:700}
 .tag{height:22px;padding:0 8px;border-radius:6px;background:var(--surf2);font-size:12px;font-weight:700;display:inline-flex;align-items:center}
 .tix .x{align-self:center;margin-right:4px;z-index:2}
 .draft{display:flex;align-items:center;gap:12px;padding:12px 14px;margin:2px 0 14px;border-radius:16px;background:var(--surf2);cursor:pointer;border:0;width:100%;text-align:left;color:var(--ink);font:inherit}
