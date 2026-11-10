@@ -373,27 +373,37 @@ async function fetchFull(id) {   // ulangi bila ada foto/TTD yang belum terbawa
   }
   return d;
 }
+/* layar menyiapkan cetak: tiket berjalan di garis rute */
+let prepAbort = false;
+function prepShow(txt, sub) { $('prepTxt').textContent = txt; $('prepSub').textContent = sub || ''; $('prep').hidden = false; }
+function prepHide() { $('prep').hidden = true; }
+$('prepNo').onclick = () => { prepAbort = true; prepHide(); snack('Cetak dibatalkan'); };
+const stopped = () => { if (prepAbort) throw new Error('__batal'); };
 $('selPrint').onclick = async () => {
   if (sel.size > 20) return snack('Maksimal 20 surat sekali cetak');
   const ids = L.filter(r => sel.has(r.id)).sort((a, b) => a.tanggal < b.tanggal ? -1 : a.tanggal > b.tanggal ? 1 : hm(a.jam_mulai) - hm(b.jam_mulai)).map(r => r.id);
   if (!ids.length) return;
-  const b = $('selPrint'); b.disabled = true;
+  const b = $('selPrint'); b.disabled = true; prepAbort = false;
   try {
     const data = [];
+    prepShow(`Menyiapkan 0 dari ${ids.length} surat…`, 'Mengambil data dan foto');
     for (let i = 0; i < ids.length; i += 2) {
-      snack(`Menyiapkan ${Math.min(i + 2, ids.length)} dari ${ids.length} surat…`);
-      data.push(...await Promise.all(ids.slice(i, i + 2).map(fetchFull)));
+      data.push(...await Promise.all(ids.slice(i, i + 2).map(fetchFull))); stopped();
+      prepShow(`Menyiapkan ${Math.min(i + 2, ids.length)} dari ${ids.length} surat…`, 'Mengambil data dan foto');
     }
     const miss = data.reduce((n, d) => n + imgMissing(d), 0);
-    $('snack').classList.remove('show');
-    if (miss && !await confirmSheet('Ada gambar yang belum terambil', miss + ' foto atau tanda tangan gagal diambil dari Drive. Cetak tetap dilanjutkan?', 'Tetap cetak')) { b.disabled = !sel.size; return; }
+    if (miss) {
+      prepHide();
+      if (!await confirmSheet('Ada gambar yang belum terambil', miss + ' foto atau tanda tangan gagal diambil dari Drive. Cetak tetap dilanjutkan?', 'Tetap cetak')) { b.disabled = !sel.size; return; }
+    }
+    prepShow('Menyusun lembar cetak…', 'Memuat foto dan tanda tangan'); stopped();
     $('batchPrint').innerHTML = data.map(d => `<div class="paper">${sheetHtml(fromServer(d))}</div>`).join('');
-    document.body.dataset.print = 'batch';   // tampilkan dulu agar gambar benar-benar dimuat
+    document.body.dataset.print = 'batch';
     const imgs = [...document.querySelectorAll('#batchPrint img')];
     await Promise.all(imgs.map(im => im.decode ? im.decode().catch(() => {}) : (im.complete ? 0 : new Promise(r => { im.onload = im.onerror = r; }))));
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 250))));
-    window.print();
-  } catch (err) { delete document.body.dataset.print; snack(err.message); }
+    stopped(); prepHide(); window.print();
+  } catch (err) { prepHide(); delete document.body.dataset.print; if (err.message !== '__batal') snack(err.message); }
   b.disabled = !sel.size;
 };
 $('fab').onclick = () => { S = blank(); saveDraft(); go('edit'); };
