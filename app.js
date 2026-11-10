@@ -258,25 +258,41 @@ async function loadList(quiet) {
   catch (e) { if (ses && !quiet) snack(e.message + ' (menampilkan data tersimpan)'); }
   if (cur === 'home') { if (tab === 'surat') renderList(); if (tab === 'rekap') renderRekap(); }
 }
+/* status dokumentasi (foto kegiatan) */
+let fDoc = 'all';
+const docSt = r => r.foto === undefined ? 'unk' : (!r.foto ? 'no' : r.foto >= r.tot ? 'ok' : 'part');
+const visible = () => fDoc === 'miss' ? L.filter(r => docSt(r) === 'no' || docSt(r) === 'part') : fDoc === 'ok' ? L.filter(r => docSt(r) === 'ok') : L;
+const docTag = r => { const t = docSt(r); return t === 'ok' ? `<span class="tag ok">${ic('check')}Foto lengkap</span>` : t === 'part' ? `<span class="tag warn">Foto ${r.foto}/${r.tot}</span>` : t === 'no' ? '<span class="tag no">Belum ada foto</span>' : ''; };
+const docTxt = r => { const t = docSt(r); return t === 'ok' ? ' · Foto lengkap' : t === 'part' ? ` · Foto ${r.foto}/${r.tot}` : t === 'no' ? ' · <span class="mis">Belum ada foto</span>' : ''; };
 function renderList() {
   const d = ls.get(dk(), null), hasDraft = d && !d.id && (locs(d.lokasi).length || d.lap.some(l => l.t || l.img));
   $('draftBox').innerHTML = hasDraft ? `<button class="draft" id="drBtn"><span style="color:var(--acc)">${ic('doc')}</span><div><b>Draf belum disimpan</b><span>${esc(locs(d.lokasi)[0] || 'Tanpa lokasi')} · ketuk untuk melanjutkan</span></div></button>` : '';
   if (hasDraft) $('drBtn').onclick = () => { S = migrate(d); go('edit'); };
   if (!L.length) {
+    $('docFilter').innerHTML = '';
     $('list').innerHTML = `<div class="empty"><svg viewBox="0 0 96 96" fill="none"><path d="M14 24h68a6 6 0 0 1 6 6v10a9 9 0 0 0 0 16v10a6 6 0 0 1-6 6H14a6 6 0 0 1-6-6V56a9 9 0 0 0 0-16V30a6 6 0 0 1 6-6z" fill="var(--surf2)"/><path d="M36 32v32" stroke="var(--acc)" stroke-width="3" stroke-dasharray="5 5" stroke-linecap="round"/><path d="M48 42h24M48 50h24M48 58h14" stroke="var(--mut)" stroke-width="3" stroke-linecap="round"/></svg><b>Belum ada surat</b>Ketuk "Buat form" untuk mulai mencatat.</div>`;
     return;
   }
+  const nOk = L.filter(r => docSt(r) === 'ok').length, nMiss = L.filter(r => docSt(r) === 'no' || docSt(r) === 'part').length;
+  $('docFilter').innerHTML = [['all', 'Semua', L.length], ['miss', 'Belum lengkap', nMiss], ['ok', 'Foto lengkap', nOk]]
+    .map(([k, n, c]) => `<button type="button" class="chip f${fDoc === k ? ' on' : ''}" data-f="${k}">${n} ${c}</button>`).join('');
+  const V = visible();
+  if (!V.length) { $('list').innerHTML = '<div class="empty"><b>Tidak ada surat</b>Tidak ada surat di filter ini.</div>'; renderHead(); return; }
   let html = '', last = '';
-  L.forEach(r => {
+  V.forEach(r => {
     const d = parseIso(r.tanggal), key = r.tanggal.slice(0, 7), lk = locs(r.lokasi), m = mins(r);
     if (key !== last) { last = key; html += `<h4 class="grp">${d ? BLN[d.getMonth()] + ' ' + d.getFullYear() : 'Tanpa tanggal'}</h4>`; }
     html += `<div class="tix${selMode && sel.has(r.id) ? ' sel' : ''}" data-o="${esc(r.id)}" role="button" tabindex="0"><div class="stub"><b>${d ? pad(d.getDate()) : '--'}</b><small>${d ? HARI[d.getDay()] : ''}</small></div>
       <div class="main"><b>${esc(lk.join(' · ') || 'Tanpa lokasi')}</b><span>${esc(tt(r.jam_mulai) || '--:--')} – ${esc(tt(r.jam_selesai) || '--:--')}</span>
-      <div class="tags"><span class="tag">${dur(m)}</span><span class="tag">${r.kegiatan} kegiatan</span></div></div>
+      <div class="tags"><span class="tag">${dur(m)}</span><span class="tag">${r.kegiatan} kegiatan</span>${docTag(r)}</div></div>
       ${selMode ? `<span class="cb">${ic('check')}</span>` : `<button class="ib x" data-x="${esc(r.id)}" aria-label="Hapus">${ic('trash')}</button>`}</div>`;
   });
   $('list').innerHTML = html; renderHead();
 }
+$('docFilter').addEventListener('click', e => {
+  const b = e.target.closest('[data-f]'); if (!b) return;
+  fDoc = b.dataset.f; if (selMode) sel.clear(); renderList();
+});
 $('list').addEventListener('click', async e => {
   if (lp) { lp = false; return; }
   const x = e.target.closest('[data-x]'), o = e.target.closest('[data-o]');
@@ -346,7 +362,7 @@ $('bs').addEventListener('click', e => {
   box.querySelectorAll('.qf').forEach(x => x.classList.toggle('on', x === q));
 });
 $('selEdit').onclick = bulkSheet;
-$('selAll').onclick = () => { if (sel.size === L.length) sel.clear(); else L.forEach(r => sel.add(r.id)); renderList(); };
+$('selAll').onclick = () => { const v = visible(); if (v.length && v.every(r => sel.has(r.id))) v.forEach(r => sel.delete(r.id)); else v.forEach(r => sel.add(r.id)); renderList(); };
 const imgMissing = d => d.lap.filter(l => l.fid && !l.img).length + d.sig.filter(g => g.fid && !g.img).length;
 async function fetchFull(id) {   // ulangi bila ada foto/TTD yang belum terbawa
   let d;
@@ -501,14 +517,14 @@ function sheetHtml(x) {
     + row(g => `<td class="st"><div>${esc(g.a)}</div><div class="jb">${esc(g.b)}</div></td>`)
     + row(g => `<td class="si">${g.img ? `<img src="${g.img}">` : ''}</td>`)
     + row((g, i) => `<td class="sn">${esc(i === 3 ? x.nama : g.n)}</td>`) + '</table>';
-  return `<h1>FORM PENGAMBILAN SETORAN</h1>
+  return `<h1>FORM PENGAMBIL SETORAN</h1>
   <div>Yang bertanda tangan di bawah ini :</div>
   <div class="f"><b>Nama</b>:<span>${esc(x.nama)}</span></div>
   <div class="f"><b>Jabatan</b>:<span>${esc(x.jabatan)}</span></div>
   <div class="f"><b>Tanggal</b>:<span>${fmtTgl(x.tgl)}</span></div>
   <div class="f"><b>Pukul</b>:<span>${esc(jam)}</span></div>
   <div class="tl">Lokasi :</div>${lk.map((v, i) => `<div class="ln"><span class="no">${i + 1}.</span><span class="v">${esc(v)}</span></div>`).join('')}
-  <hr><h2>LAPORAN PENGAMBILAN SETORAN</h2><table>${tb}</table>${sg}`;
+  <hr><h2>LAPORAN TUGAS LEMBUR KARYAWAN</h2><table>${tb}</table>${sg}`;
 }
 function build() { $('sheet').innerHTML = sheetHtml(S); fit(); }
 function fit() {
@@ -532,8 +548,9 @@ function renderRekap() {
   const rows = monthRows(), tot = rows.reduce((a, r) => a + mins(r), 0), keg = rows.reduce((a, r) => a + (+r.kegiatan || 0), 0), lk = lokStats(rows), mx = lk.length ? lk[0].c : 1;
   $('tab_rekap').innerHTML = `<div class="pager"><button class="ib" data-m="-1" aria-label="Bulan sebelumnya"><span style="display:contents">${ic('back')}</span></button><b>${monthLabel()}</b><button class="ib" data-m="1" aria-label="Bulan berikutnya">${ic('chev')}</button></div>
   <div class="stats"><div class="stat hl"><b>${rows.length}</b><span>Form</span></div><div class="stat"><b>${dur(tot)}</b><span>Total jam</span></div><div class="stat"><b>${keg}</b><span>Kegiatan</span></div></div>
+  ${rows.length && rows.every(r => r.foto !== undefined) ? `<p class="note" style="margin:10px 4px 0">${rows.filter(r => docSt(r) === 'ok').length} dari ${rows.length} surat sudah lengkap dokumentasinya${rows.some(r => docSt(r) !== 'ok') ? ' · <a href="#" id="rkMiss" style="color:var(--acc);font-weight:700">lihat yang belum</a>' : ''}</p>` : ''}
   ${rows.length ? `<div class="panel"><h3>Lokasi terbanyak</h3>${lk.slice(0, 6).map(x => `<div class="lb"><span class="nm">${esc(x.n)}</span><span class="tr"><i style="width:${Math.max(6, x.c / mx * 100)}%"></i></span><em>${x.c}</em></div>`).join('') || '<p class="mut">Belum ada lokasi.</p>'}</div>
-  <div class="panel"><h3>Rincian</h3>${rows.map(r => { const d = parseIso(r.tanggal); return `<div class="rr" data-o="${esc(r.id)}"><div class="d"><b>${d ? pad(d.getDate()) : '--'}</b><small>${d ? HARI[d.getDay()] : ''}</small></div><div class="x"><span>${esc(locs(r.lokasi).join(' · ') || 'Tanpa lokasi')}</span><small>${esc(tt(r.jam_mulai) || '--:--')} – ${esc(tt(r.jam_selesai) || '--:--')} · ${r.kegiatan} kegiatan</small></div><div class="r">${dur(mins(r))}</div></div>`; }).join('')}</div>
+  <div class="panel"><h3>Rincian</h3>${rows.map(r => { const d = parseIso(r.tanggal); return `<div class="rr" data-o="${esc(r.id)}"><div class="d"><b>${d ? pad(d.getDate()) : '--'}</b><small>${d ? HARI[d.getDay()] : ''}</small></div><div class="x"><span>${esc(locs(r.lokasi).join(' · ') || 'Tanpa lokasi')}</span><small>${esc(tt(r.jam_mulai) || '--:--')} – ${esc(tt(r.jam_selesai) || '--:--')} · ${r.kegiatan} kegiatan${docTxt(r)}</small></div><div class="r">${dur(mins(r))}</div></div>`; }).join('')}</div>
   <div class="acts"><button class="btn" id="rkPrint">${ic('print')}Cetak rekap</button><button class="btn tonal" id="rkCsv">${ic('down')}Unduh CSV</button></div>`
     : `<div class="empty"><b>Belum ada data</b>Tidak ada surat di bulan ${monthLabel()}.</div>`}`;
 }
@@ -543,21 +560,22 @@ $('tab_rekap').addEventListener('click', async e => {
   else if (o) { try { await openView(o.dataset.o); } catch (err) { snack(err.message); } }
   else if (e.target.closest('#rkPrint')) { buildRekapPrint(); doPrint('rekap'); }
   else if (e.target.closest('#rkCsv')) downloadCsv();
+  else if (e.target.closest('#rkMiss')) { e.preventDefault(); fDoc = 'miss'; setTab('surat'); }
 });
 function buildRekapPrint() {
   const rows = monthRows(), tot = rows.reduce((a, r) => a + mins(r), 0), keg = rows.reduce((a, r) => a + (+r.kegiatan || 0), 0);
   $('rekapPrint').innerHTML = `<h1>REKAP FORM PENGAMBIL SETORAN</h1>
   <div class="f"><b>Periode</b>:&nbsp;${monthLabel()}</div><div class="f"><b>Nama</b>:&nbsp;${esc(ses.user.nama)}</div><div class="f"><b>Jabatan</b>:&nbsp;${esc(ses.user.jabatan || '')}</div>
-  <table><colgroup><col style="width:9mm"><col style="width:27mm"><col style="width:27mm"><col style="width:17mm"><col><col style="width:17mm"></colgroup>
-  <thead><tr><th>No</th><th>Tanggal</th><th>Pukul</th><th>Durasi</th><th>Lokasi</th><th>Kegiatan</th></tr></thead>
-  <tbody>${rows.map((r, i) => { const d = parseIso(r.tanggal); return `<tr><td>${i + 1}</td><td>${d ? HARI[d.getDay()] + ', ' + d.getDate() + ' ' + BLNS[d.getMonth()] : ''}</td><td>${esc(tt(r.jam_mulai))} – ${esc(tt(r.jam_selesai))}</td><td>${dur(mins(r))}</td><td>${esc(locs(r.lokasi).join(', '))}</td><td>${r.kegiatan}</td></tr>`; }).join('')}</tbody>
-  <tfoot><tr><td colspan="3">Total (${rows.length} form)</td><td>${dur(tot)}</td><td></td><td>${keg}</td></tr></tfoot></table>
+  <table><colgroup><col style="width:9mm"><col style="width:27mm"><col style="width:27mm"><col style="width:17mm"><col><col style="width:17mm"><col style="width:15mm"></colgroup>
+  <thead><tr><th>No</th><th>Tanggal</th><th>Pukul</th><th>Durasi</th><th>Lokasi</th><th>Kegiatan</th><th>Foto</th></tr></thead>
+  <tbody>${rows.map((r, i) => { const d = parseIso(r.tanggal); return `<tr><td>${i + 1}</td><td>${d ? HARI[d.getDay()] + ', ' + d.getDate() + ' ' + BLNS[d.getMonth()] : ''}</td><td>${esc(tt(r.jam_mulai))} – ${esc(tt(r.jam_selesai))}</td><td>${dur(mins(r))}</td><td>${esc(locs(r.lokasi).join(', '))}</td><td>${r.kegiatan}</td><td>${r.foto === undefined ? '' : r.foto + '/' + r.tot}</td></tr>`; }).join('')}</tbody>
+  <tfoot><tr><td colspan="3">Total (${rows.length} form)</td><td>${dur(tot)}</td><td></td><td>${keg}</td><td></td></tr></tfoot></table>
   <div class="ttd">Dibuat oleh,<div></div>${esc(ses.user.nama)}</div>`;
 }
 function downloadCsv() {
   const rows = monthRows(); if (!rows.length) return snack('Tidak ada data bulan ini');
-  const data = [['Tanggal', 'Mulai', 'Selesai', 'Durasi (menit)', 'Lokasi', 'Jumlah kegiatan', 'Pembuat']]
-    .concat(rows.map(r => [r.tanggal, tt(r.jam_mulai), tt(r.jam_selesai), mins(r), locs(r.lokasi).join(' | '), r.kegiatan, ses.user.nama]));
+  const data = [['Tanggal', 'Mulai', 'Selesai', 'Durasi (menit)', 'Lokasi', 'Jumlah kegiatan', 'Foto terisi', 'Kegiatan terisi', 'Dokumentasi', 'Pembuat']]
+    .concat(rows.map(r => [r.tanggal, tt(r.jam_mulai), tt(r.jam_selesai), mins(r), locs(r.lokasi).join(' | '), r.kegiatan, r.foto === undefined ? '' : r.foto, r.tot === undefined ? '' : r.tot, { ok: 'Lengkap', part: 'Sebagian', no: 'Belum ada', unk: '' }[docSt(r)], ses.user.nama]));
   const txt = '\ufeff' + data.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\r\n');
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type: 'text/csv;charset=utf-8' }));
   a.download = `rekap-setoran-${R.m}.csv`; document.body.appendChild(a); a.click(); a.remove(); snack('CSV diunduh');
