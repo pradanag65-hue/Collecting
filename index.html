@@ -36,6 +36,10 @@
 <symbol id="i-checks" viewBox="0 0 24 24"><path d="M4 7l2 2 3-3M4 17l2 2 3-3M12 8h8M12 18h8"/></symbol>
 <symbol id="i-pen" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM13 7l4 4"/></symbol>
 <symbol id="i-hist" viewBox="0 0 24 24"><path d="M12 7v5l3 2M4 12a8 8 0 1 0 2.5-5.8M4 4v4h4"/></symbol>
+<symbol id="i-copy" viewBox="0 0 24 24"><path d="M9 9h10v10H9zM5 15V5h10"/></symbol>
+<symbol id="i-share" viewBox="0 0 24 24"><path d="M12 3v12M8 7l4-4 4 4M5 13v7h14v-7"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-5-5"/></symbol>
+<symbol id="i-cal" viewBox="0 0 24 24"><path d="M5 6h14v14H5zM5 10h14M9 3v5M15 3v5"/></symbol>
 <symbol id="i-ref" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></symbol>
 </defs></svg>
 
@@ -77,13 +81,17 @@
     <div><p id="hHi" class="hi"></p><h1 id="hTitle">Surat saya</h1></div>
     <div class="hacts"><button class="ib" id="selBtn" aria-label="Pilih surat untuk dicetak"><svg class="ic"><use href="#i-checks"/></svg></button><button class="ib" id="refBtn" aria-label="Muat ulang"><svg class="ic"><use href="#i-ref"/></svg></button></div>
   </header>
-  <div id="tab_surat" class="body"><div id="draftBox"></div><div id="docFilter" class="fchips"></div><div id="list"></div></div>
+  <div id="tab_surat" class="body"><div id="draftBox"></div><div id="qBox"></div>
+    <div class="srch" id="srchBox" hidden><svg class="ic"><use href="#i-search"/></svg><input id="fq" type="search" placeholder="Cari lokasi, tanggal, atau hari" autocomplete="off"></div>
+    <div id="docFilter" class="fchips"></div>
+    <div id="dateRow" class="drow" hidden><div class="fld fix"><input id="fFrom" type="date" placeholder=" "><label for="fFrom">Dari</label></div><div class="fld fix"><input id="fTo" type="date" placeholder=" "><label for="fTo">Sampai</label></div><button class="chip" id="fReset">Reset</button></div>
+    <div id="list"></div></div>
   <div id="tab_rekap" class="body" hidden></div>
   <div id="tab_akun" class="body" hidden></div>
   <button class="fab" id="fab"><svg class="ic"><use href="#i-plus"/></svg><span>Buat form</span></button>
-  <div class="selbar" id="selbar" hidden><span id="selN">0 surat</span><button class="chip" id="selAll">Semua</button><button class="chip" id="selEdit">Ubah</button><button class="btn sm acc" id="selPrint"><svg class="ic"><use href="#i-print"/></svg>Cetak</button></div>
+  <div class="selbar" id="selbar" hidden><span id="selN">0 surat</span><button class="chip" id="selAll">Semua</button><button class="chip" id="selEdit">Ubah</button><button class="chip" id="selShare" aria-label="Bagikan PDF"><svg class="ic"><use href="#i-share"/></svg></button><button class="btn sm acc" id="selPrint"><svg class="ic"><use href="#i-print"/></svg>Cetak</button></div>
   <nav class="nav" aria-label="Menu utama">
-    <button id="n_surat" class="on"><i><svg class="ic"><use href="#i-doc"/></svg></i>Surat</button>
+    <button id="n_surat" class="on"><i><svg class="ic"><use href="#i-doc"/></svg><b class="bdg" id="bdgSurat" hidden></b></i>Surat</button>
     <button id="n_rekap"><i><svg class="ic"><use href="#i-chart"/></svg></i>Rekap</button>
     <button id="n_akun"><i><svg class="ic"><use href="#i-user"/></svg></i>Akun</button>
   </nav>
@@ -98,6 +106,7 @@
     <button class="btn sm" id="saveBtn">Simpan</button>
   </header>
   <div class="body">
+    <div id="copyBox" class="copybox"></div>
     <div class="card"><h3>Penugasan</h3>
       <div class="fld"><input id="nama" placeholder=" " autocomplete="off"><label for="nama">Nama</label></div>
       <div class="fld"><input id="jabatan" data-sg="jabatan" placeholder=" "><label for="jabatan">Jabatan</label></div>
@@ -106,6 +115,7 @@
         <div class="fld fix"><input id="j1" type="time" placeholder=" "><label for="j1">Mulai</label></div>
         <div class="fld fix"><input id="j2" type="time" placeholder=" "><label for="j2">Selesai</label></div>
       </div>
+      <p id="jamWarn" class="warnTxt" hidden></p>
     </div>
     <div class="card"><h3>Lokasi</h3><p class="hint">Isi sampai 3 lokasi.</p>
       <div class="fld"><input id="lk0" class="lk" data-sg="lokasi" placeholder=" "><label for="lk0">Lokasi 1</label></div>
@@ -125,6 +135,8 @@
   <header class="appbar">
     <button class="ib" id="pvBack" aria-label="Kembali"><svg class="ic"><use href="#i-back"/></svg></button>
     <h2>Siap cetak</h2>
+    <button class="ib" id="pvCopy" aria-label="Salin surat"><svg class="ic"><use href="#i-copy"/></svg></button>
+    <button class="ib" id="pvShare" aria-label="Bagikan PDF"><svg class="ic"><use href="#i-share"/></svg></button>
     <button class="ib" id="pvEdit" aria-label="Ubah surat"><svg class="ic"><use href="#i-pen"/></svg></button>
     <button class="btn sm acc" id="prn"><svg class="ic"><use href="#i-print"/></svg>Cetak</button>
   </header>
