@@ -29,6 +29,7 @@ const locs = s => String(s || '').split('\n').map(x => x.trim()).filter(Boolean)
 let cfg = ls.get('st_cfg', {}); if (API_URL) cfg.url = API_URL;
 let ses = ls.get('st_ses', null);
 let selMode = false, sel = new Set(), lp = false, lpT, lpXY = [0, 0];
+let fQ = '', fFrom = '', fTo = '', reminded = false;
 let S = null, L = [], R = { m: isoToday().slice(0, 7) }, tab = 'surat', cur = 'login', lgMode = 'in';
 const dk = () => 'st_draft_' + ses.user.username, ck = () => 'st_cache_' + ses.user.username;
 
@@ -163,7 +164,7 @@ async function api(action, data = {}) {
   try {
     const r = await fetch(cfg.url, { method: 'POST', body: JSON.stringify({ action, token: ses && ses.token, ...data }) });
     j = await r.json();
-  } catch (e) { throw new Error('Tidak bisa terhubung ke server'); }
+  } catch (e) { const er = new Error('Tidak bisa terhubung ke server'); er.net = true; throw er; }
   if (!j.ok) {
     if (j.error === 'Sesi habis') { logout(); throw new Error('Sesi habis, silakan masuk lagi'); }
     throw new Error(j.error || 'Gagal');
@@ -202,7 +203,7 @@ function renderHead() {
   $('hTitle').textContent = selMode ? 'Pilih surat' : { surat: 'Surat saya', rekap: 'Rekap', akun: 'Akun' }[tab];
   $('fab').hidden = tab !== 'surat' || selMode;
   $('selbar').hidden = !selMode;
-  $('selN').textContent = sel.size + ' surat'; $('selPrint').disabled = !sel.size; $('selEdit').disabled = !sel.size;
+  $('selN').textContent = sel.size + ' surat'; $('selPrint').disabled = !sel.size; $('selEdit').disabled = !sel.size; $('selShare').disabled = !sel.size;
 }
 $('edBack').onclick = () => history.back(); $('pvBack').onclick = () => history.back();
 $('edPrev').onclick = () => go('prev');
@@ -233,11 +234,11 @@ $('lgPass').addEventListener('keydown', e => { if (e.key === 'Enter') $('lgGo').
 function startSession(r) {
   ses = { token: r.token, user: r.user }; ls.set('st_ses', ses);
   ['lgUser', 'lgPass', 'upNama', 'upJab', 'upKode'].forEach(i => $(i).value = '');
-  L = ls.get(ck(), []); tab = 'surat'; S = null; H = null;
+  L = ls.get(ck(), []); tab = 'surat'; S = null; H = null; reminded = false;
   history.replaceState({ v: 'home' }, ''); setView('home'); loadList(true); loadHist();
 }
 function logout() {
-  ses = null; S = null; L = []; H = null; ls.del('st_ses'); setMode('in'); history.replaceState({ v: 'login' }, ''); setView('login');
+  ses = null; S = null; L = []; H = null; reminded = false; ls.del('st_ses'); setMode('in'); history.replaceState({ v: 'login' }, ''); setView('login');
 }
 function serverSheet() {
   openSheet(`<h3>Alamat server</h3><p class="mut">URL Web App Apps Script (berakhiran /exec).</p>
@@ -256,15 +257,27 @@ async function loadList(quiet) {
   if (!ses) return;
   try { const r = await api('list'); L = r.data; ls.set(ck(), L); }
   catch (e) { if (ses && !quiet) snack(e.message + ' (menampilkan data tersimpan)'); }
+  const n = updBadge();
   if (cur === 'home') { if (tab === 'surat') renderList(); if (tab === 'rekap') renderRekap(); }
+  if (n && !reminded && cur === 'home') { reminded = true; snack(n + ' surat belum lengkap fotonya', 'Lihat', () => { fDoc = 'miss'; setTab('surat'); }); }
+  qSync(true);
 }
 /* status dokumentasi (foto kegiatan) */
 let fDoc = 'all';
 const docSt = r => r.foto === undefined ? 'unk' : (!r.foto ? 'no' : r.foto >= r.tot ? 'ok' : 'part');
-const visible = () => fDoc === 'miss' ? L.filter(r => docSt(r) === 'no' || docSt(r) === 'part') : fDoc === 'ok' ? L.filter(r => docSt(r) === 'ok') : L;
+const matchQ = r => { if (!fQ) return true; const hay = (r.tanggal + ' ' + fmtTgl(r.tanggal) + ' ' + (r.lokasi || '')).toLowerCase(); return fQ.toLowerCase().split(/\s+/).filter(Boolean).every(t => hay.includes(t)); };
+const inRange = r => (!fFrom || r.tanggal >= fFrom) && (!fTo || r.tanggal <= fTo);
+const visible = () => L.filter(r => (fDoc === 'all' || (fDoc === 'miss' ? (docSt(r) === 'no' || docSt(r) === 'part') : docSt(r) === 'ok')) && matchQ(r) && inRange(r));
+function updBadge() {
+  const n = L.filter(r => docSt(r) === 'no' || docSt(r) === 'part').length, b = $('bdgSurat');
+  if (b) { b.hidden = !n; b.textContent = n > 99 ? '99+' : n; }
+  try { if (navigator.setAppBadge) { n ? navigator.setAppBadge(n) : navigator.clearAppBadge(); } } catch (e) {}
+  return n;
+}
 const docTag = r => { const t = docSt(r); return t === 'ok' ? `<span class="tag ok">${ic('check')}Foto lengkap</span>` : t === 'part' ? `<span class="tag warn">Foto ${r.foto}/${r.tot}</span>` : t === 'no' ? '<span class="tag no">Belum ada foto</span>' : ''; };
 const docTxt = r => { const t = docSt(r); return t === 'ok' ? ' · Foto lengkap' : t === 'part' ? ` · Foto ${r.foto}/${r.tot}` : t === 'no' ? ' · <span class="mis">Belum ada foto</span>' : ''; };
 function renderList() {
+  renderQ(); updBadge(); $('srchBox').hidden = !L.length;
   const d = ls.get(dk(), null), hasDraft = d && !d.id && (locs(d.lokasi).length || d.lap.some(l => l.t || l.img));
   $('draftBox').innerHTML = hasDraft ? `<button class="draft" id="drBtn"><span style="color:var(--acc)">${ic('doc')}</span><div><b>Draf belum disimpan</b><span>${esc(locs(d.lokasi)[0] || 'Tanpa lokasi')} · ketuk untuk melanjutkan</span></div></button>` : '';
   if (hasDraft) $('drBtn').onclick = () => { S = migrate(d); go('edit'); };
@@ -275,10 +288,10 @@ function renderList() {
   }
   const nOk = L.filter(r => docSt(r) === 'ok').length, nMiss = L.filter(r => docSt(r) === 'no' || docSt(r) === 'part').length;
   $('docFilter').innerHTML = [['all', 'Semua', L.length], ['miss', 'Belum lengkap', nMiss], ['ok', 'Foto lengkap', nOk]]
-    .map(([k, n, c]) => `<button type="button" class="chip f${fDoc === k ? ' on' : ''}" data-f="${k}">${n} ${c}</button>`).join('');
+    .map(([k, n, c]) => `<button type="button" class="chip f${fDoc === k ? ' on' : ''}" data-f="${k}">${n} ${c}</button>`).join('') + `<button type="button" class="chip f${fFrom || fTo ? ' on' : ''}" data-f="date">${ic('cal')}Tanggal</button>`;
   const V = visible();
   if (!V.length) { $('list').innerHTML = '<div class="empty"><b>Tidak ada surat</b>Tidak ada surat di filter ini.</div>'; renderHead(); return; }
-  let html = '', last = '';
+  let html = (fQ || fFrom || fTo || fDoc !== 'all') ? `<p class="mut" style="margin:0 4px 8px;font-size:13px">${V.length} dari ${L.length} surat</p>` : '', last = '';
   V.forEach(r => {
     const d = parseIso(r.tanggal), key = r.tanggal.slice(0, 7), lk = locs(r.lokasi), m = mins(r);
     if (key !== last) { last = key; html += `<h4 class="grp">${d ? BLN[d.getMonth()] + ' ' + d.getFullYear() : 'Tanpa tanggal'}</h4>`; }
@@ -291,8 +304,13 @@ function renderList() {
 }
 $('docFilter').addEventListener('click', e => {
   const b = e.target.closest('[data-f]'); if (!b) return;
+  if (b.dataset.f === 'date') { $('dateRow').hidden = !$('dateRow').hidden; return; }
   fDoc = b.dataset.f; if (selMode) sel.clear(); renderList();
 });
+$('fq').addEventListener('input', e => { fQ = e.target.value.trim(); renderList(); });
+$('fFrom').addEventListener('change', e => { fFrom = e.target.value; renderList(); });
+$('fTo').addEventListener('change', e => { fTo = e.target.value; renderList(); });
+$('fReset').onclick = () => { fFrom = fTo = ''; $('fFrom').value = $('fTo').value = ''; renderList(); };
 $('list').addEventListener('click', async e => {
   if (lp) { lp = false; return; }
   const x = e.target.closest('[data-x]'), o = e.target.closest('[data-o]');
@@ -375,7 +393,7 @@ async function fetchFull(id) {   // ulangi bila ada foto/TTD yang belum terbawa
 }
 /* layar menyiapkan cetak: tiket berjalan di garis rute */
 let prepAbort = false;
-function prepShow(txt, sub) { $('prepTxt').textContent = txt; $('prepSub').textContent = sub || ''; $('prep').hidden = false; }
+function prepShow(txt, sub, noCancel) { $('prepTxt').textContent = txt; $('prepSub').textContent = sub || ''; $('prepNo').hidden = noCancel === true; $('prep').hidden = false; }
 function prepHide() { $('prep').hidden = true; }
 $('prepNo').onclick = () => { prepAbort = true; prepHide(); snack('Cetak dibatalkan'); };
 const stopped = () => { if (prepAbort) throw new Error('__batal'); };
@@ -406,6 +424,67 @@ $('selPrint').onclick = async () => {
   } catch (err) { prepHide(); delete document.body.dataset.print; if (err.message !== '__batal') snack(err.message); }
   b.disabled = !sel.size;
 };
+/* ---- bagikan PDF (WhatsApp dan lainnya) ---- */
+const libs = {};
+function loadScript(src) {
+  return libs[src] || (libs[src] = new Promise((res, rej) => {
+    const el = document.createElement('script'); el.src = src; el.onload = res;
+    el.onerror = () => { delete libs[src]; rej(new Error('Pustaka PDF gagal dimuat. Perlu internet.')); }; document.head.appendChild(el);
+  }));
+}
+async function buildPdf(list, onP) {
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+  const doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4', compress: true }), host = document.createElement('div');
+  host.className = 'xrender'; document.body.appendChild(host);
+  try {
+    let first = true;
+    for (let i = 0; i < list.length; i++) {
+      if (onP) onP(i + 1, list.length);
+      host.innerHTML = `<div class="paper">${sheetHtml(list[i])}</div>`;
+      const el = host.firstChild;
+      await Promise.all([...el.querySelectorAll('img')].map(im => im.decode ? im.decode().catch(() => {}) : 0));
+      const cv = await window.html2canvas(el, { scale: 2, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0 }), hPx = Math.floor(cv.width * 297 / 210);
+      for (let y = 0; y < cv.height; y += hPx) {
+        const sl = document.createElement('canvas'); sl.width = cv.width; sl.height = Math.min(hPx, cv.height - y);
+        sl.getContext('2d').drawImage(cv, 0, y, cv.width, sl.height, 0, 0, cv.width, sl.height);
+        if (!first) doc.addPage(); first = false;
+        doc.addImage(sl.toDataURL('image/jpeg', .92), 'JPEG', 0, 0, 210, sl.height * 210 / cv.width);
+      }
+    }
+    return doc.output('blob');
+  } finally { host.remove(); }
+}
+function pdfReady(blob, name) {
+  openSheet(`<h3>PDF siap</h3><p class="mut">${esc(name)} · ${Math.max(1, Math.round(blob.size / 1024))} KB</p>
+    <div class="acts end"><button class="btn tonal" id="pdDl">Unduh</button><button class="btn" id="pdSh">${ic('share')}Bagikan</button></div>`);
+  const dl = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); };
+  $('pdDl').onclick = () => { dl(); closeSheet(); snack('PDF diunduh'); };
+  $('pdSh').onclick = async () => {
+    const f = new File([blob], name, { type: 'application/pdf' });
+    if (navigator.canShare && navigator.canShare({ files: [f] })) {
+      try { await navigator.share({ files: [f], title: name }); closeSheet(); return; } catch (e) { if (e.name === 'AbortError') return; }
+    }
+    dl(); closeSheet(); snack('Berbagi tidak didukung di sini. PDF diunduh, kirim dari file manager.');
+  };
+}
+$('selShare').onclick = async () => {
+  if (sel.size > 20) return snack('Maksimal 20 surat sekali bagikan');
+  const ids = L.filter(r => sel.has(r.id)).sort((a, b) => a.tanggal < b.tanggal ? -1 : a.tanggal > b.tanggal ? 1 : hm(a.jam_mulai) - hm(b.jam_mulai)).map(r => r.id);
+  if (!ids.length) return;
+  prepAbort = false;
+  try {
+    const data = [];
+    prepShow(`Menyiapkan 0 dari ${ids.length} surat…`, 'Mengambil data dan foto');
+    for (let i = 0; i < ids.length; i += 2) {
+      data.push(...await Promise.all(ids.slice(i, i + 2).map(fetchFull))); stopped();
+      prepShow(`Menyiapkan ${Math.min(i + 2, ids.length)} dari ${ids.length} surat…`, 'Mengambil data dan foto');
+    }
+    const list = data.map(fromServer), blob = await buildPdf(list, (n, t) => { stopped(); prepShow(`Membuat PDF ${n} dari ${t}…`, 'Menyusun halaman'); });
+    prepHide();
+    pdfReady(blob, list.length === 1 ? `Form-Setoran-${list[0].tgl}.pdf` : `Form-Setoran-${list[0].tgl}-sd-${list[list.length - 1].tgl}.pdf`);
+  } catch (e) { prepHide(); if (e.message !== '__batal') snack(e.message); }
+};
 $('fab').onclick = () => { S = blank(); saveDraft(); go('edit'); };
 
 function fromServer(d) {
@@ -434,15 +513,41 @@ function fillEditor() {
   ['nama', 'jabatan', 'tgl', 'j1', 'j2'].forEach(k => $(k).value = S[k] || '');
   const l = String(S.lokasi || '').split('\n'); [0, 1, 2].forEach(i => $('lk' + i).value = l[i] || '');
   $('edTitle').textContent = S.id ? 'Ubah surat' : 'Surat baru';
-  renderLap(); renderSig();
+  renderLap(); renderSig(); renderCopyBox(); updJamWarn();
 }
-function compress(file, cb) {
+/* foto: dikecilkan + stempel waktu dan lokasi (bisa dimatikan di tab Akun) */
+function getPos() {
+  return new Promise(res => {
+    if (!navigator.geolocation) return res(null);
+    navigator.geolocation.getCurrentPosition(p => res(p.coords), () => res(null), { enableHighAccuracy: true, timeout: 6000, maximumAge: 60000 });
+  });
+}
+function drawStamp(x, w, h, text) {
+  let fs = Math.max(12, Math.round(w * 0.034));
+  const pd = () => Math.round(fs * .5);
+  x.font = `600 ${fs}px Arial`;
+  while (fs > 10 && x.measureText(text).width > w - 2 * pd()) { fs--; x.font = `600 ${fs}px Arial`; }
+  const bar = fs + pd() * 2;
+  x.fillStyle = 'rgba(0,0,0,.55)'; x.fillRect(0, h - bar, w, bar);
+  x.fillStyle = '#fff'; x.textBaseline = 'middle'; x.fillText(text, pd(), h - bar / 2);
+}
+async function compress(file, cb) {
+  const stamp = ls.get('st_stamp', true) !== false, when = new Date(file.lastModified || Date.now());
+  const recent = Math.abs(Date.now() - when.getTime()) < 10 * 60000;   // koordinat hanya dipakai untuk foto yang baru diambil
+  if (stamp) snack('Memproses foto…');
+  const pos = stamp && recent ? await getPos() : null;
   const fr = new FileReader();
   fr.onload = () => {
     const im = new Image();
     im.onload = () => {
       const r = Math.min(1, 700 / Math.max(im.width, im.height)), c = document.createElement('canvas');
-      c.width = im.width * r; c.height = im.height * r; c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+      c.width = im.width * r; c.height = im.height * r;
+      const x = c.getContext('2d'); x.drawImage(im, 0, 0, c.width, c.height);
+      if (stamp) {
+        let t = `${pad(when.getDate())}/${pad(when.getMonth() + 1)}/${when.getFullYear()} ${pad(when.getHours())}:${pad(when.getMinutes())}`;
+        if (pos) t += ` · ${pos.latitude.toFixed(5)}, ${pos.longitude.toFixed(5)}`;
+        drawStamp(x, c.width, c.height, t); $('snack').classList.remove('show');
+      }
       cb(c.toDataURL('image/jpeg', .72));
     };
     im.src = fr.result;
@@ -496,23 +601,178 @@ function initPad(cv) {
   cv.onpointerup = end; cv.onpointercancel = end;
 }
 
+function payload() {
+  const m = o => ({ img: o.dirty ? o.img : '', fid: o.dirty ? '' : o.fid });
+  return {
+    id: S.id, nama: S.nama, jabatan: S.jabatan, tgl: S.tgl, j1: S.j1, j2: S.j2, lokasi: S.lokasi,
+    lap: S.lap.map(l => ({ t: l.t, ...m(l) })), sig: S.sig.map(g => ({ a: g.a, b: g.b, n: g.n, ...m(g) }))
+  };
+}
 $('saveBtn').onclick = async () => {
   if (!String(S.nama).trim()) return snack('Isi nama dulu');
+  const w = checkSurat(); if (w.length && !await warnSheet(w)) return;
   const b = $('saveBtn'); b.disabled = true; b.textContent = 'Menyimpan…';
-  const m = o => ({ img: o.dirty ? o.img : '', fid: o.dirty ? '' : o.fid });
-  const data = {
-    id: S.id, nama: S.nama, jabatan: S.jabatan, tgl: S.tgl, j1: S.j1, j2: S.j2, lokasi: S.lokasi,
-    lap: S.lap.map(l => ({ t: l.t, ...m(l) })), sig: S.sig.map(s => ({ a: s.a, b: s.b, n: s.n, ...m(s) }))
-  };
-  try {
-    const wasNew = !S.id, r = await api('save', { data });
-    S = fromServer((await api('get', { id: r.id })).data);
-    if (wasNew) ls.del(dk());
-    learn(S); loadHist();
-    loadList(true); goHome(); snack('Tersimpan ke spreadsheet');
-  } catch (e) { snack('Gagal menyimpan: ' + e.message + '. Draf aman di HP.'); }
+  const data = payload(), wasNew = !S.id; let r = null;
+  try { r = await api('save', { data }); }
+  catch (e) {
+    if (e.net && qAdd(data)) {
+      if (wasNew) ls.del(dk());
+      learn(S); b.disabled = false; b.textContent = 'Simpan'; goHome();
+      snack('Belum ada sinyal. Surat disimpan di HP dan dikirim otomatis nanti.'); return;
+    }
+    snack('Gagal menyimpan: ' + e.message + '. Draf aman di HP.'); b.disabled = false; b.textContent = 'Simpan'; return;
+  }
+  if (wasNew) ls.del(dk());
+  try { S = fromServer((await api('get', { id: r.id })).data); } catch (e) {}
+  learn(S); loadHist(); loadList(true); goHome(); snack('Tersimpan ke spreadsheet');
   b.disabled = false; b.textContent = 'Simpan';
 };
+
+/* ============ antrean offline ============ */
+const qk = () => 'st_q_' + ses.user.username;
+const qGet = () => ls.get(qk(), []);
+let qBusy = false;
+function qSet(a) { try { localStorage.setItem(qk(), JSON.stringify(a)); return true; } catch (e) { return false; } }
+function qAdd(data) { const a = qGet(); a.push({ qid: 'q' + Date.now() + Math.random().toString(36).slice(2, 6), at: Date.now(), data }); return qSet(a); }
+async function qSync(quiet) {
+  if (!ses || qBusy || !qGet().length || navigator.onLine === false) return;
+  qBusy = true; let ok = 0;
+  try {
+    for (const it of qGet()) {
+      if (it.err) continue;
+      try { await api('save', { data: it.data }); ok++; qSet(qGet().filter(x => x.qid !== it.qid)); }
+      catch (e) { if (e.net) break; it.err = e.message; qSet(qGet().map(x => x.qid === it.qid ? it : x)); }
+    }
+  } finally { qBusy = false; }
+  renderQ();
+  if (ok) { snack(ok + ' surat terkirim ke spreadsheet'); loadList(true); loadHist(); }
+}
+function renderQ() {
+  const box = $('qBox'); if (!box || !ses) return; const a = qGet();
+  box.innerHTML = a.length ? '<h4 class="grp">Menunggu dikirim</h4>' + a.map(it => {
+    const d = it.data, dt = parseIso(d.tgl), lk = locs(d.lokasi);
+    return `<div class="tix pend" data-q="${esc(it.qid)}" role="button" tabindex="0"><div class="stub"><b>${dt ? pad(dt.getDate()) : '--'}</b><small>${dt ? HARI[dt.getDay()] : ''}</small></div>
+      <div class="main"><b>${esc(lk.join(' · ') || 'Tanpa lokasi')}</b><span>${esc(tt(d.j1) || '--:--')} – ${esc(tt(d.j2) || '--:--')}</span>
+      <div class="tags"><span class="tag ${it.err ? 'no' : 'warn'}">${it.err ? 'Gagal kirim' : 'Menunggu sinyal'}</span></div></div></div>`;
+  }).join('') : '';
+}
+$('qBox').addEventListener('click', e => {
+  const t = e.target.closest('[data-q]'); if (!t) return;
+  const it = qGet().find(x => x.qid === t.dataset.q); if (!it) return;
+  openSheet(`<h3>Menunggu dikirim</h3><p class="mut">${it.err ? 'Gagal dikirim: ' + esc(it.err) : 'Surat ini tersimpan di HP dan belum masuk ke spreadsheet.'}</p>
+    <div class="acts end"><button class="btn txt" id="qDel">Hapus</button><button class="btn" id="qGo">Kirim sekarang</button></div>`);
+  $('qDel').onclick = () => { qSet(qGet().filter(x => x.qid !== it.qid)); closeSheet(); renderQ(); snack('Dihapus dari antrean'); };
+  $('qGo').onclick = () => { closeSheet(); qSet(qGet().map(x => { if (x.qid === it.qid) delete x.err; return x; })); qSync(); };
+});
+window.addEventListener('online', () => qSync());
+setInterval(() => qSync(true), 60000);
+
+/* ============ cek isian janggal ============ */
+function jamIssues(j1, j2) {
+  const a = hm(j1), b = hm(j2), w = [];
+  if (a == null || b == null) { if (j1 || j2) w.push('Jam mulai atau selesai belum lengkap.'); return w; }
+  const m = mins({ jam_mulai: j1, jam_selesai: j2 });
+  if (m === 0) w.push('Jam mulai dan selesai sama.');
+  else { if (b < a) w.push('Jam selesai lebih awal dari jam mulai (dihitung melewati tengah malam).'); if (m > 720) w.push('Durasi ' + dur(m) + ' lebih dari 12 jam.'); }
+  return w;
+}
+function updJamWarn() { const w = jamIssues(S.j1, S.j2), el = $('jamWarn'); el.textContent = w.join(' '); el.hidden = !w.length; }
+['j1', 'j2'].forEach(id => $(id).addEventListener('input', () => { if (S) updJamWarn(); }));
+function checkSurat() {
+  const w = [];
+  if (!S.tgl) w.push('Tanggal belum diisi.');
+  else {
+    const d = parseIso(S.tgl), n = new Date();
+    if (d && d > new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1)) w.push('Tanggal ada di masa depan (' + fmtTgl(S.tgl) + ').');
+    if (L.some(r => r.tanggal === S.tgl && r.id !== S.id)) w.push('Sudah ada surat lain di ' + fmtTgl(S.tgl) + '.');
+  }
+  if (hm(S.j1) == null || hm(S.j2) == null) w.push('Jam mulai atau jam selesai belum diisi.'); else w.push(...jamIssues(S.j1, S.j2));
+  if (!locs(S.lokasi).length) w.push('Lokasi belum diisi.');
+  const kg = S.lap.filter(l => String(l.t || '').trim() || l.img || l.fid);
+  if (!kg.length) w.push('Belum ada kegiatan.');
+  else { const nf = kg.filter(l => !l.img && !l.fid).length; if (nf) w.push(nf + ' kegiatan belum ada foto.'); }
+  if (!S.sig[3].img && !S.sig[3].fid) w.push('Tanda tangan "Dibuat oleh" belum ada.');
+  return w;
+}
+function warnSheet(w) {
+  return new Promise(res => {
+    openSheet(`<h3>Cek dulu sebelum simpan</h3><ul class="wl">${w.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+      <div class="acts end"><button class="btn txt" id="wkNo">Perbaiki</button><button class="btn" id="wkOk">Tetap simpan</button></div>`);
+    $('wkNo').onclick = () => { closeSheet(); res(false); }; $('wkOk').onclick = () => { closeSheet(); res(true); };
+  });
+}
+
+/* ============ salin & buat beberapa tanggal ============ */
+function copyOf(x) {
+  return { ...blank(), nama: x.nama, jabatan: x.jabatan, j1: x.j1, j2: x.j2, lokasi: x.lokasi,
+    lap: x.lap.map(l => ({ t: l.t, img: '', fid: '', dirty: false })),
+    sig: x.sig.map(g => ({ a: g.a, b: g.b, n: g.n, img: g.img || '', fid: '', dirty: !!g.img })) };
+}
+async function copyFromId(id) {
+  try {
+    snack('Menyalin…'); S = copyOf(fromServer((await api('get', { id })).data)); saveDraft(); fillEditor();
+    snack('Disalin. Ganti tanggal, jam, dan foto.');
+  } catch (e) { snack(e.message); }
+}
+function renderCopyBox() {
+  const b = $('copyBox'); if (!b) return;
+  if (S.id || !L.length) { b.innerHTML = ''; return; }
+  const l = L[0];
+  b.innerHTML = `<button class="cbtn" id="cpLast">${ic('copy')}<span><b>Salin dari surat terakhir</b><small>${esc(fmtTgl(l.tanggal))} · ${esc(locs(l.lokasi)[0] || 'Tanpa lokasi')}</small></span></button>
+    <button class="cbtn" id="cpPick">${ic('doc')}<span><b>Pilih surat lain</b></span></button>
+    <button class="cbtn" id="cpMulti">${ic('cal')}<span><b>Buat beberapa tanggal</b></span></button>`;
+}
+$('copyBox').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.id === 'cpLast' && L[0]) copyFromId(L[0].id);
+  if (b.id === 'cpPick') {
+    openSheet(`<h3>Salin dari surat</h3><div class="bkbody">${L.slice(0, 20).map(r => `<div class="rr" data-cp="${esc(r.id)}"><div class="x"><span>${esc(locs(r.lokasi).join(' · ') || 'Tanpa lokasi')}</span><small>${esc(fmtTgl(r.tanggal))} · ${esc(tt(r.jam_mulai))}–${esc(tt(r.jam_selesai))}</small></div></div>`).join('')}</div>`);
+  }
+  if (b.id === 'cpMulti') multiSheet(L[0] && L[0].id);
+});
+$('bs').addEventListener('click', e => { const r = e.target.closest('[data-cp]'); if (r) { closeSheet(); copyFromId(r.dataset.cp); } });
+function toEdit() { history.replaceState({ v: 'edit', d: (history.state && history.state.d) || 1 }, ''); setView('edit'); }
+let MC = null;
+function mcDraw() {
+  const [y, m] = MC.ym.split('-').map(Number), n = new Date(y, m, 0).getDate(), off = (new Date(y, m - 1, 1).getDay() + 6) % 7, have = new Set(L.map(r => r.tanggal)), td = isoToday();
+  let h = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'].map(d => `<b>${d}</b>`).join('') + '<i></i>'.repeat(off);
+  for (let d = 1; d <= n; d++) { const k = `${y}-${pad(m)}-${pad(d)}`; h += `<button type="button" data-d="${k}" class="${MC.dates.has(k) ? 'on ' : ''}${have.has(k) ? 'has ' : ''}${k === td ? 'td' : ''}"${have.has(k) ? ' disabled' : ''}>${d}</button>`; }
+  $('mcCal').innerHTML = h; $('mcMon').textContent = BLN[m - 1] + ' ' + y;
+  $('mcOk').textContent = MC.dates.size ? `Buat ${MC.dates.size} surat` : 'Buat surat'; $('mcOk').disabled = !MC.dates.size;
+}
+function multiSheet(srcId) {
+  if (!srcId) return snack('Belum ada surat untuk disalin');
+  const r0 = L.find(r => r.id === srcId) || L[0];
+  MC = { src: r0.id, ym: R.m || isoToday().slice(0, 7), dates: new Set() };
+  openSheet(`<h3>Buat beberapa tanggal</h3><p class="mut">Isi dan tanda tangan disalin dari surat sumber. Foto diisi belakangan. Tanggal yang sudah ada suratnya dicoret.</p>
+    <div class="bkbody"><div class="fld fix"><select id="mcSrc">${L.slice(0, 30).map(r => `<option value="${esc(r.id)}"${r.id === r0.id ? ' selected' : ''}>${esc(fmtTgl(r.tanggal))} · ${esc(locs(r.lokasi)[0] || 'Tanpa lokasi')}</option>`).join('')}</select><label for="mcSrc">Salin dari</label></div>
+    <div class="pager" style="margin:12px 0 4px"><button class="ib" id="mcPrev" aria-label="Bulan sebelumnya">${ic('back')}</button><b id="mcMon"></b><button class="ib" id="mcNext" aria-label="Bulan berikutnya">${ic('chev')}</button></div>
+    <div class="cal" id="mcCal"></div>
+    <div class="acts" style="margin:0 0 6px"><button class="chip" id="mcWd">Senin sampai Jumat</button><button class="chip" id="mcClr">Kosongkan</button></div>
+    <div class="two"><div class="fld fix"><input id="mcJ1" type="time" placeholder=" " value="${esc(tt(r0.jam_mulai))}"><label for="mcJ1">Mulai</label></div><div class="fld fix"><input id="mcJ2" type="time" placeholder=" " value="${esc(tt(r0.jam_selesai))}"><label for="mcJ2">Selesai</label></div></div></div>
+    <div class="acts end"><button class="btn txt" id="mcNo">Batal</button><button class="btn" id="mcOk">Buat surat</button></div>`);
+  mcDraw();
+  const mon = d => { const [y, m] = MC.ym.split('-').map(Number), x = new Date(y, m - 1 + d, 1); MC.ym = `${x.getFullYear()}-${pad(x.getMonth() + 1)}`; mcDraw(); };
+  $('mcCal').onclick = e => { const b = e.target.closest('[data-d]'); if (!b) return; const k = b.dataset.d; MC.dates.has(k) ? MC.dates.delete(k) : MC.dates.add(k); mcDraw(); };
+  $('mcPrev').onclick = () => mon(-1); $('mcNext').onclick = () => mon(1);
+  $('mcWd').onclick = () => {
+    const [y, m] = MC.ym.split('-').map(Number), have = new Set(L.map(r => r.tanggal));
+    for (let d = 1; d <= new Date(y, m, 0).getDate(); d++) { const w = new Date(y, m - 1, d).getDay(), k = `${y}-${pad(m)}-${pad(d)}`; if (w >= 1 && w <= 5 && !have.has(k)) MC.dates.add(k); }
+    mcDraw();
+  };
+  $('mcClr').onclick = () => { MC.dates.clear(); mcDraw(); };
+  $('mcSrc').onchange = () => { MC.src = $('mcSrc').value; const r = L.find(x => x.id === MC.src); if (r) { $('mcJ1').value = tt(r.jam_mulai); $('mcJ2').value = tt(r.jam_selesai); } };
+  $('mcNo').onclick = closeSheet;
+  $('mcOk').onclick = async () => {
+    const dates = [...MC.dates].sort(), j1 = $('mcJ1').value, j2 = $('mcJ2').value;
+    if (!dates.length) return; if (dates.length > 31) return snack('Maksimal 31 tanggal');
+    closeSheet(); prepShow(`Membuat ${dates.length} surat…`, 'Menyalin isi dan tanda tangan', true);
+    try {
+      const r = await api('clone', { id: MC.src, dates, j1, j2 }); prepHide(); await loadList(true); goHome();
+      snack(r.ids.length + ' surat dibuat. Lengkapi fotonya di tiap tanggal.');
+    } catch (e) { prepHide(); snack('Gagal: ' + e.message); }
+  };
+}
 
 /* ============ pratinjau & cetak form ============ */
 function sheetHtml(x) {
@@ -546,6 +806,19 @@ function doPrint(kind) { document.body.dataset.print = kind; try { window.print(
 window.addEventListener('afterprint', () => { delete document.body.dataset.print; });
 $('prn').onclick = () => doPrint('form');
 $('pvEdit').onclick = () => go('edit');
+$('pvCopy').onclick = () => {
+  openSheet(`<h3>Salin surat ini</h3><p class="mut">Isi dan tanda tangan ikut disalin. Foto diisi belakangan.</p>
+    <div class="acts" style="flex-direction:column"><button class="btn tonal wide" id="pcOne">Jadikan surat baru</button><button class="btn tonal wide" id="pcMany">Buat beberapa tanggal</button></div>`);
+  $('pcOne').onclick = () => { closeSheet(); S = copyOf(S); toEdit(); snack('Disalin. Ganti tanggal, jam, dan foto.'); };
+  $('pcMany').onclick = () => { closeSheet(); if (!S.id) return snack('Simpan surat dulu'); multiSheet(S.id); };
+};
+$('pvShare').onclick = async () => {
+  prepAbort = false;
+  try {
+    prepShow('Membuat PDF…', 'Menyusun halaman'); const blob = await buildPdf([S], () => stopped());
+    prepHide(); pdfReady(blob, `Form-Setoran-${S.tgl || 'surat'}.pdf`);
+  } catch (e) { prepHide(); if (e.message !== '__batal') snack(e.message); }
+};
 
 /* ============ rekap ============ */
 function monthRows() { return L.filter(r => (r.tanggal || '').slice(0, 7) === R.m).sort((a, b) => a.tanggal < b.tanggal ? -1 : a.tanggal > b.tanggal ? 1 : hm(a.jam_mulai) - hm(b.jam_mulai)); }
@@ -595,8 +868,9 @@ function downloadCsv() {
 function renderAkun() {
   const u = ses.user;
   $('tab_akun').innerHTML = `<div class="me"><div class="av">${esc((u.nama || '?').trim().charAt(0).toUpperCase())}</div><div><b>${esc(u.nama)}</b><span>@${esc(u.username)}${u.jabatan ? ' · ' + esc(u.jabatan) : ''}</span></div></div>
-  <div style="margin-top:10px"><button class="row-item" id="akPass">${ic('key')}Ganti kata sandi</button><button class="row-item" id="akSrv">${ic('link')}Alamat server</button><button class="row-item dng" id="akOut">${ic('out')}Keluar</button></div>
+  <div style="margin-top:10px"><button class="row-item" id="akStamp">${ic('camera')}Stempel waktu dan lokasi di foto<span class="rt">${ls.get('st_stamp', true) !== false ? 'Aktif' : 'Mati'}</span></button><button class="row-item" id="akPass">${ic('key')}Ganti kata sandi</button><button class="row-item" id="akSrv">${ic('link')}Alamat server</button><button class="row-item dng" id="akOut">${ic('out')}Keluar</button></div>
   <p class="note">Surat, foto, dan rekap hanya bisa dilihat dan diubah oleh akun ini.</p>`;
+  $('akStamp').onclick = () => { const on = ls.get('st_stamp', true) === false; ls.set('st_stamp', on); renderAkun(); snack(on ? 'Aktif. Lokasi diminta saat foto diambil.' : 'Stempel foto dimatikan'); };
   $('akSrv').onclick = serverSheet;
   $('akOut').onclick = async () => { if (await confirmSheet('Keluar dari akun?', 'Draf yang belum disimpan tetap aman di HP ini.', 'Keluar')) logout(); };
   $('akPass').onclick = () => {
@@ -618,4 +892,5 @@ function renderAkun() {
   if (ses && cfg.url) { L = ls.get(ck(), []); history.replaceState({ v: 'home' }, ''); setView('home'); loadList(true); loadHist(); }
   else { ses = null; history.replaceState({ v: 'login' }, ''); setView('login'); }
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  if (ses) { renderQ(); setTimeout(() => qSync(true), 1500); }
 })();
