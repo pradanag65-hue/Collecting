@@ -513,7 +513,7 @@ function fillEditor() {
   ['nama', 'jabatan', 'tgl', 'j1', 'j2'].forEach(k => $(k).value = S[k] || '');
   const l = String(S.lokasi || '').split('\n'); [0, 1, 2].forEach(i => $('lk' + i).value = l[i] || '');
   $('edTitle').textContent = S.id ? 'Ubah surat' : 'Surat baru';
-  renderLap(); renderSig(); renderCopyBox(); updJamWarn();
+  renderLap(); renderSig(); renderCopyBox(); updJamWarn(); renderStampSeg();
 }
 /* foto: dikecilkan + stempel waktu dan lokasi (bisa dimatikan di tab Akun) */
 function getPos() {
@@ -522,20 +522,53 @@ function getPos() {
     navigator.geolocation.getCurrentPosition(p => res(p.coords), () => res(null), { enableHighAccuracy: true, timeout: 6000, maximumAge: 60000 });
   });
 }
-function drawStamp(x, w, h, text) {
-  let fs = Math.max(12, Math.round(w * 0.034));
-  const pd = () => Math.round(fs * .5);
+/* mode stempel: off = tanpa stempel, time = waktu saja, full = waktu + koordinat + alamat lengkap */
+const STAMP_LBL = { off: 'Tanpa stempel', time: 'Waktu saja', full: 'Waktu + alamat' };
+const stampMode = () => ls.get('st_stamp2', null) || (ls.get('st_stamp', true) === false ? 'off' : 'full');
+function renderStampSeg() { const m = stampMode(); document.querySelectorAll('#stampSeg button').forEach(b => b.classList.toggle('on', b.dataset.m === m)); }
+$('stampSeg').addEventListener('click', e => {
+  const b = e.target.closest('button[data-m]'); if (!b) return;
+  ls.set('st_stamp2', b.dataset.m); renderStampSeg();
+  snack(b.dataset.m === 'off' ? 'Foto tidak diberi stempel (cocok untuk foto yang sudah ber-watermark)' : b.dataset.m === 'time' ? 'Foto diberi stempel tanggal dan jam' : 'Foto diberi stempel waktu dan alamat lengkap');
+});
+const geoCache = ls.get('st_geo', {});
+async function addrOf(lat, lon) {   // koordinat -> alamat lengkap (OpenStreetMap Nominatim)
+  const k = lat.toFixed(4) + ',' + lon.toFixed(4); if (geoCache[k]) return geoCache[k];
+  try {
+    const ac = new AbortController(), tm = setTimeout(() => ac.abort(), 6000);
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&accept-language=id&lat=${lat}&lon=${lon}`, { signal: ac.signal });
+    clearTimeout(tm);
+    const a = String((await r.json()).display_name || '').replace(/,\s*Indonesia$/i, '').trim();
+    if (a) { geoCache[k] = a; const ks = Object.keys(geoCache); while (ks.length > 40) delete geoCache[ks.shift()]; ls.set('st_geo', geoCache); }
+    return a;
+  } catch (e) { return ''; }
+}
+function wrapLines(x, text, maxW, maxLines) {
+  const lines = []; let cur = '';
+  for (const w of String(text).split(/\s+/)) {
+    const t = cur ? cur + ' ' + w : w;
+    if (x.measureText(t).width > maxW && cur) { lines.push(cur); cur = w; } else cur = t;
+  }
+  if (cur) lines.push(cur);
+  if (lines.length > maxLines) { lines.length = maxLines; lines[maxLines - 1] = lines[maxLines - 1].replace(/.{0,2}$/, '…'); }
+  return lines;
+}
+function drawStamp(x, w, h, head, addr) {
+  const fs = Math.max(11, Math.round(w * 0.03)), pd = Math.round(fs * .6), lh = Math.round(fs * 1.32);
   x.font = `600 ${fs}px Arial`;
-  while (fs > 10 && x.measureText(text).width > w - 2 * pd()) { fs--; x.font = `600 ${fs}px Arial`; }
-  const bar = fs + pd() * 2;
-  x.fillStyle = 'rgba(0,0,0,.55)'; x.fillRect(0, h - bar, w, bar);
-  x.fillStyle = '#fff'; x.textBaseline = 'middle'; x.fillText(text, pd(), h - bar / 2);
+  const lines = [head].concat(addr ? wrapLines(x, addr, w - 2 * pd, 3) : []), bar = lines.length * lh + pd * 2 - (lh - fs);
+  x.fillStyle = 'rgba(0,0,0,.6)'; x.fillRect(0, h - bar, w, bar);
+  x.fillStyle = '#fff'; x.textBaseline = 'top';
+  lines.forEach((t, i) => x.fillText(t, pd, h - bar + pd + i * lh));
 }
 async function compress(file, cb) {
-  const stamp = ls.get('st_stamp', true) !== false, when = new Date(file.lastModified || Date.now());
+  const mode = stampMode(), stamp = mode !== 'off', when = new Date(file.lastModified || Date.now());
   const recent = Math.abs(Date.now() - when.getTime()) < 10 * 60000;   // koordinat hanya dipakai untuk foto yang baru diambil
-  if (stamp) snack('Memproses foto…');
-  const pos = stamp && recent ? await getPos() : null;
+  let pos = null, addr = '';
+  if (stamp) {
+    snack('Memproses foto…');
+    if (recent) { pos = await getPos(); if (pos && mode === 'full') { snack('Mencari alamat…'); addr = await addrOf(pos.latitude, pos.longitude); } }
+  }
   const fr = new FileReader();
   fr.onload = () => {
     const im = new Image();
@@ -546,7 +579,7 @@ async function compress(file, cb) {
       if (stamp) {
         let t = `${pad(when.getDate())}/${pad(when.getMonth() + 1)}/${when.getFullYear()} ${pad(when.getHours())}:${pad(when.getMinutes())}`;
         if (pos) t += ` · ${pos.latitude.toFixed(5)}, ${pos.longitude.toFixed(5)}`;
-        drawStamp(x, c.width, c.height, t); $('snack').classList.remove('show');
+        drawStamp(x, c.width, c.height, t, addr); $('snack').classList.remove('show');
       }
       cb(c.toDataURL('image/jpeg', .72));
     };
@@ -868,9 +901,9 @@ function downloadCsv() {
 function renderAkun() {
   const u = ses.user;
   $('tab_akun').innerHTML = `<div class="me"><div class="av">${esc((u.nama || '?').trim().charAt(0).toUpperCase())}</div><div><b>${esc(u.nama)}</b><span>@${esc(u.username)}${u.jabatan ? ' · ' + esc(u.jabatan) : ''}</span></div></div>
-  <div style="margin-top:10px"><button class="row-item" id="akStamp">${ic('camera')}Stempel waktu dan lokasi di foto<span class="rt">${ls.get('st_stamp', true) !== false ? 'Aktif' : 'Mati'}</span></button><button class="row-item" id="akPass">${ic('key')}Ganti kata sandi</button><button class="row-item" id="akSrv">${ic('link')}Alamat server</button><button class="row-item dng" id="akOut">${ic('out')}Keluar</button></div>
+  <div style="margin-top:10px"><button class="row-item" id="akStamp">${ic('camera')}Stempel foto<span class="rt">${STAMP_LBL[stampMode()]}</span></button><button class="row-item" id="akPass">${ic('key')}Ganti kata sandi</button><button class="row-item" id="akSrv">${ic('link')}Alamat server</button><button class="row-item dng" id="akOut">${ic('out')}Keluar</button></div>
   <p class="note">Surat, foto, dan rekap hanya bisa dilihat dan diubah oleh akun ini.</p>`;
-  $('akStamp').onclick = () => { const on = ls.get('st_stamp', true) === false; ls.set('st_stamp', on); renderAkun(); snack(on ? 'Aktif. Lokasi diminta saat foto diambil.' : 'Stempel foto dimatikan'); };
+  $('akStamp').onclick = () => { const o = ['off', 'time', 'full'], m = o[(o.indexOf(stampMode()) + 1) % 3]; ls.set('st_stamp2', m); renderAkun(); snack('Stempel foto: ' + STAMP_LBL[m]); };
   $('akSrv').onclick = serverSheet;
   $('akOut').onclick = async () => { if (await confirmSheet('Keluar dari akun?', 'Draf yang belum disimpan tetap aman di HP ini.', 'Keluar')) logout(); };
   $('akPass').onclick = () => {
