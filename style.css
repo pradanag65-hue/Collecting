@@ -224,7 +224,7 @@ canvas.pad{width:100%;height:130px;background:#fff;border:1.5px dashed var(--lin
 
 /* pratinjau & kertas */
 .stage{overflow:hidden;padding:8px 12px 24px}
-.paper{background:#fff;color:#000;width:210mm;min-height:297mm;padding:14mm;font:12px/1.4 Arial,Helvetica,sans-serif}
+.paper{background:#fff;color:#000;width:215mm;min-height:330mm;padding:14mm;font:12px/1.4 Arial,Helvetica,sans-serif}
 #sheet{transform-origin:top left;margin:0 auto;box-shadow:0 1px 3px #0003,0 8px 24px #0002}
 .paper h1{text-align:center;font:700 20px/1.25 Arial,Helvetica,sans-serif;margin:2mm 0 12mm;letter-spacing:.03em}
 .paper .f{display:flex;margin:2mm 0 0}.f b{font-weight:400;width:32mm}.f span{flex:1;border-bottom:1px solid #666;padding:0 2mm 1px;min-height:5mm}
@@ -235,9 +235,10 @@ canvas.pad{width:100%;height:130px;background:#fff;border:1.5px dashed var(--lin
 .paper hr{border:0;border-top:1px solid #999;margin:9mm -14mm 6mm}
 .paper h2{font:700 14px Arial,Helvetica,sans-serif;margin:0 0 3mm;padding:0}
 .paper table{width:100%;border-collapse:collapse;table-layout:fixed}
-.paper td{border:1px solid #999;vertical-align:top;padding:1.5mm;font-size:10px}
-.paper td.ph{height:52mm;text-align:center;vertical-align:middle}
-.paper td.ph img{max-width:100%;max-height:50mm}
+.paper td{border:1px solid #999;vertical-align:top;padding:2mm;font-size:11px;line-height:1.35}
+.paper tr{break-inside:avoid;page-break-inside:avoid}
+.paper td.ph{height:82mm;text-align:center;vertical-align:middle;padding:1.5mm}
+.paper td.ph img{display:block;margin:0 auto;max-width:100%;max-height:79mm;object-fit:contain}
 /* tanda tangan: empat kolom berkotak, baris otomatis sejajar */
 .paper table.sgt{margin-top:12mm;break-inside:avoid;font-size:11px}
 .paper .sgt td{border:0;border-left:1px solid #999;border-right:1px solid #999;padding:0 3mm;text-align:left;overflow-wrap:anywhere;font-size:11px;line-height:1.45}
@@ -250,7 +251,7 @@ canvas.pad{width:100%;height:130px;background:#fff;border:1.5px dashed var(--lin
 .paper .sgt .sn{font-weight:700;line-height:1.3;min-height:6mm;padding-top:1mm}
 
 /* kertas rekap (hanya saat cetak) */
-#rekapPrint{display:none;background:#fff;color:#000;width:210mm;padding:14mm;font:12px/1.4 Arial,Helvetica,sans-serif}
+#rekapPrint{display:none;background:#fff;color:#000;width:215mm;padding:14mm;font:12px/1.4 Arial,Helvetica,sans-serif}
 #rekapPrint h1{text-align:center;font:700 15px Arial;margin:0 0 6mm}
 #rekapPrint .f{display:flex;margin:2mm 0 0}.f b{font-weight:400;width:32mm}
 #rekapPrint table{width:100%;border-collapse:collapse;margin-top:6mm;table-layout:fixed}
@@ -270,9 +271,10 @@ canvas.pad{width:100%;height:130px;background:#fff;border:1.5px dashed var(--lin
 .selbar span{flex:1;font-weight:800}
 .selbar .chip{color:var(--bg);border-color:#8d93b455}
 
-@page{size:A4;margin:0}
+@page{size:215mm 330mm;margin:0}   /* F4 / Folio */
 @media print{
   body{background:#fff}
+  .paper{min-height:328mm}
   #snack,#scrim,#bs{display:none!important}
   body[data-print="form"] .screen:not(#s_prev){display:none!important}
   body[data-print="form"] #s_prev .appbar{display:none!important}
