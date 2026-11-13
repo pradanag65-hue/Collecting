@@ -435,7 +435,7 @@ function loadScript(src) {
 async function buildPdf(list, onP) {
   await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
   await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
-  const doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4', compress: true }), host = document.createElement('div');
+  const doc = new window.jspdf.jsPDF({ unit: 'mm', format: [215, 330], compress: true }), host = document.createElement('div');
   host.className = 'xrender'; document.body.appendChild(host);
   try {
     let first = true;
@@ -444,12 +444,12 @@ async function buildPdf(list, onP) {
       host.innerHTML = `<div class="paper">${sheetHtml(list[i])}</div>`;
       const el = host.firstChild;
       await Promise.all([...el.querySelectorAll('img')].map(im => im.decode ? im.decode().catch(() => {}) : 0));
-      const cv = await window.html2canvas(el, { scale: 2, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0 }), hPx = Math.floor(cv.width * 297 / 210);
+      const cv = await window.html2canvas(el, { scale: 2, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0 }), hPx = Math.floor(cv.width * 330 / 215);
       for (let y = 0; y < cv.height; y += hPx) {
         const sl = document.createElement('canvas'); sl.width = cv.width; sl.height = Math.min(hPx, cv.height - y);
         sl.getContext('2d').drawImage(cv, 0, y, cv.width, sl.height, 0, 0, cv.width, sl.height);
         if (!first) doc.addPage(); first = false;
-        doc.addImage(sl.toDataURL('image/jpeg', .92), 'JPEG', 0, 0, 210, sl.height * 210 / cv.width);
+        doc.addImage(sl.toDataURL('image/jpeg', .92), 'JPEG', 0, 0, 215, sl.height * 215 / cv.width);
       }
     }
     return doc.output('blob');
@@ -820,14 +820,14 @@ function sheetHtml(x) {
     + row(g => `<td class="st"><div>${esc(g.a)}</div><div class="jb">${esc(g.b)}</div></td>`)
     + row(g => `<td class="si">${g.img ? `<img src="${g.img}">` : ''}</td>`)
     + row((g, i) => `<td class="sn">${esc(i === 3 ? x.nama : g.n)}</td>`) + '</table>';
-  return `<h1>FORM PENGAMBILAN SETORAN</h1>
+  return `<h1>FORM PENGAMBIL SETORAN</h1>
   <div>Yang bertanda tangan di bawah ini :</div>
   <div class="f"><b>Nama</b>:<span>${esc(x.nama)}</span></div>
   <div class="f"><b>Jabatan</b>:<span>${esc(x.jabatan)}</span></div>
   <div class="f"><b>Tanggal</b>:<span>${fmtTgl(x.tgl)}</span></div>
   <div class="f"><b>Pukul</b>:<span>${esc(jam)}</span></div>
   <div class="tl">Lokasi :</div>${lk.map((v, i) => `<div class="ln"><span class="no">${i + 1}.</span><span class="v">${esc(v)}</span></div>`).join('')}
-  <hr><h2>LAPORAN PENGAMBILAN SETORAN</h2><table>${tb}</table>${sg}`;
+  <hr><h2>LAPORAN TUGAS LEMBUR KARYAWAN</h2><table>${tb}</table>${sg}`;
 }
 function build() { $('sheet').innerHTML = sheetHtml(S); fit(); }
 function fit() {
