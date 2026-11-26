@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1b2a6b">
+<meta name="robots" content="noindex">
+<meta name="maintenance" content="1">
+<title>Busnya lagi mogok sebentar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap">
+<style>
+:root{--navy:#1b2a6b;--deep:#10183f;--red:#e5483a;--amber:#f2b632}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:calc(env(safe-area-inset-top,0px) + 24px) 20px calc(env(safe-area-inset-bottom,0px) + 24px);background:var(--navy);color:#fff;font:500 16px/1.5 "Plus Jakarta Sans",system-ui,-apple-system,Roboto,sans-serif;text-align:center;overflow-x:hidden}
+.wrap{width:min(440px,100%)}
+.scene{position:relative}
+svg{display:block;width:100%;height:auto;overflow:visible}
+h1{margin:6px 0 8px;font-size:34px;line-height:1.05;font-weight:800;letter-spacing:-.02em}
+.lead{margin:0 auto;max-width:34ch;opacity:.86;font-size:15px}
+.joke{min-height:3.2em;margin:16px auto 6px;max-width:36ch;font-weight:700;font-size:17px;color:var(--amber);transition:opacity .35s}
+.joke.out{opacity:0}
+.pg{margin:12px auto 4px;max-width:360px;text-align:left}
+.pg .row{display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-bottom:6px}
+.bar{height:12px;border-radius:6px;background:#ffffff26;overflow:hidden}
+.fill{height:100%;width:99%;border-radius:6px;background:repeating-linear-gradient(135deg,var(--red) 0 10px,#ff7a6b 10px 20px);animation:fill 4.5s cubic-bezier(.2,.7,.2,1),stripe .9s linear infinite;background-size:28px 28px}
+.pg small{display:block;margin-top:6px;font-size:12px;opacity:.7}
+.stats{display:flex;justify-content:center;gap:10px;margin:14px 0 4px;font-size:13px;font-weight:700}
+.stats span{padding:6px 14px;border-radius:16px;background:#ffffff1f;font-variant-numeric:tabular-nums}
+.honkmsg{min-height:1.5em;margin:6px 0 0;font-size:13px;opacity:.85}
+.btns{display:flex;justify-content:center;gap:10px;margin:14px 0 8px;flex-wrap:wrap}
+button{min-height:46px;padding:0 24px;border:0;border-radius:23px;font:800 15px "Plus Jakarta Sans",system-ui,sans-serif;cursor:pointer}
+.b1{background:var(--amber);color:#1d1500}
+.b2{background:transparent;color:#fff;box-shadow:inset 0 0 0 2px #ffffff80}
+button:active{transform:scale(.96)}
+.eta{margin:6px 0 0;font-size:14px;font-weight:700}
+.foot{margin:10px 0 0;font-size:12px;opacity:.6}
+.honk{position:absolute;right:2%;top:2%;padding:6px 12px;border-radius:14px 14px 14px 2px;background:#fff;color:var(--navy);font-weight:800;font-size:15px;opacity:0;transform:scale(.6) rotate(-6deg);transform-origin:left bottom;transition:all .15s;pointer-events:none}
+.honk.show{opacity:1;transform:scale(1) rotate(-6deg)}
+#bus{cursor:pointer}
+#gl{display:block;width:100%;aspect-ratio:360/250;cursor:grab;touch-action:pan-y;outline:0}
+#gl:active{cursor:grabbing}
+.tip3{margin:2px 0 0;font-size:12px;opacity:.6}
+.wob{transform-box:fill-box;transform-origin:50% 100%;animation:wob 1.6s ease-in-out infinite}
+.wob.shake{animation:shake .45s}
+.sm{transform-box:fill-box;transform-origin:center;animation:smoke 2.6s ease-out infinite;opacity:0}
+.s2{animation-delay:.85s}.s3{animation-delay:1.7s}
+.wr{transform-box:fill-box;transform-origin:50% 85%;animation:wr 1.1s ease-in-out infinite alternate}
+.snail{animation:snail 26s linear infinite}
+.cl{animation:cloud 30s linear infinite}.cl2{animation-duration:42s;animation-delay:-14s}
+@keyframes wob{0%,100%{transform:rotate(-.5deg) translateY(0)}50%{transform:rotate(.6deg) translateY(1.5px)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px) rotate(-1deg)}40%{transform:translateX(5px) rotate(1deg)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+@keyframes smoke{0%{opacity:0;transform:translateY(0) scale(.6)}20%{opacity:.85}100%{opacity:0;transform:translateY(-46px) scale(1.7)}}
+@keyframes wr{from{transform:rotate(-28deg)}to{transform:rotate(28deg)}}
+@keyframes snail{from{transform:translateX(-50px)}to{transform:translateX(400px)}}
+@keyframes cloud{from{transform:translateX(-90px)}to{transform:translateX(450px)}}
+@keyframes fill{from{width:0}to{width:99%}}
+@keyframes stripe{to{background-position:28px 0}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.sm{opacity:.4}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="scene">
+    <svg id="flat" viewBox="0 0 360 215" role="img" aria-label="Bus kecil yang mogok di pinggir jalan, ada siput yang menyalip">
+      <g fill="#ffffff22"><ellipse class="cl" cx="40" cy="28" rx="30" ry="9"/><ellipse class="cl cl2" cx="20" cy="52" rx="22" ry="7"/></g>
+      <rect y="142" width="360" height="73" fill="#10183f"/>
+      <path d="M0 175H360" stroke="#f2b632" stroke-width="3" stroke-dasharray="14 12"/>
+      <g id="bus" transform="translate(66,54)">
+        <g class="wob" id="wob">
+          <circle class="sm" cx="30" cy="-8" r="8" fill="#cfd5ea"/><circle class="sm s2" cx="40" cy="-8" r="6" fill="#cfd5ea"/><circle class="sm s3" cx="24" cy="-8" r="7" fill="#cfd5ea"/>
+          <rect y="2" width="200" height="72" rx="14" fill="#fff"/>
+          <rect y="44" width="200" height="12" fill="#e5483a"/>
+          <rect x="14" y="14" width="30" height="24" rx="4" fill="#bcd0ff"/><rect x="50" y="14" width="30" height="24" rx="4" fill="#bcd0ff"/><rect x="86" y="14" width="30" height="24" rx="4" fill="#bcd0ff"/>
+          <rect x="122" y="12" width="28" height="44" rx="4" fill="#9db4f0"/><path d="M136 12v44" stroke="#fff" stroke-width="2"/>
+          <rect x="158" y="12" width="32" height="30" rx="6" fill="#bcd0ff"/>
+          <circle cx="194" cy="58" r="5" fill="#f2b632"/>
+          <rect x="100" y="-12" width="90" height="14" rx="3" fill="#10183f"/>
+          <text x="145" y="-2" fill="#f2b632" font-size="9" font-weight="800" text-anchor="middle" font-family="Arial,sans-serif">TUJUAN: BENGKEL</text>
+          <circle cx="44" cy="78" r="15" fill="#111"/><circle cx="44" cy="78" r="6" fill="#8d93b4"/>
+          <ellipse cx="44" cy="86" rx="17" ry="8" fill="#111"/>
+          <circle cx="156" cy="78" r="15" fill="#111"/><circle cx="156" cy="78" r="6" fill="#8d93b4"/>
+          <g transform="translate(206,84)"><g class="wr"><rect x="-3" y="-4" width="6" height="30" rx="3" fill="#cfd5ea"/><circle cy="-8" r="8" fill="#cfd5ea"/><circle cy="-8" r="3.4" fill="#10183f"/></g></g>
+        </g>
+      </g>
+      <g class="snail"><g transform="translate(0,196)"><ellipse cx="12" cy="10" rx="14" ry="4.5" fill="#9db4f0"/><circle cx="10" cy="4" r="8" fill="#f2b632"/><circle cx="10" cy="4" r="4" fill="none" stroke="#1d1500" stroke-width="1.6"/><path d="M24 8 28 0M27 9 32 3" stroke="#9db4f0" stroke-width="1.8" stroke-linecap="round"/></g></g>
+    </svg>
+    <canvas id="gl" hidden aria-label="Bus 3D yang mogok. Geser untuk memutar, ketuk untuk klakson." role="img"></canvas>
+    <div class="honk" id="honk">TIN TIN!</div>
+  </div>
+
+  <p class="tip3" id="tip3" hidden>Geser untuk memutar busnya. Ketuk untuk klakson.</p>
+  <h1>Busnya lagi mogok.</h1>
+  <p class="lead">Pintunya ditutup sebentar buat dirapikan. Tidak ada yang hilang, cuma lagi diservis.</p>
+  <p class="joke" id="joke" aria-live="polite"></p>
+
+  <div class="pg"><div class="row"><span>Perbaikan</span><span>99%</span></div><div class="bar"><div class="fill"></div></div><small>Yang 1% terakhir memang biasanya paling lama.</small></div>
+
+  <div class="stats"><span>Mogok sudah <b id="tm">00:00</b></span><span>Klakson <b id="hn">0</b>x</span></div>
+  <p class="honkmsg" id="hm"></p>
+  <div class="btns"><button class="b1" id="kl">Klakson</button><button class="b2" id="rl">Coba lagi</button></div>
+  <p class="eta" id="eta"></p>
+  <p class="foot">Halaman ini mengecek sendiri tiap 30 detik. Kalau sudah beres, kamu dibawa balik otomatis.</p>
+</div>
+
+<script>
+const ESTIMASI = '';   // isi kalau mau, contoh: 'Perkiraan kembali jam 15.00 WIB'
+const JOKES = [
+  'Mesin lagi dipanasin. Tolong jangan dilihatin terus, dia malu.',
+  'Sopirnya lagi cari parkiran buat servernya.',
+  'Tiket lagi dicetak ulang. Kertasnya sengaja pilih F4.',
+  'Kalau ada yang tanya "udah sampai mana?", jawabannya: belum berangkat.',
+  'Kabel-kabel lagi dipijetin biar rileks.',
+  'Servernya ngopi dulu. Katanya 5 menit (versi dia).',
+  'Siput di bawah itu sudah menyalip. Kita tidak mau komentar.',
+  'Ada baut sisa satu. Kata montir, itu fitur.'
+];
+const HONK = { 1: 'Klakson berbunyi. Busnya pura-pura tidak dengar.', 3: 'Klakson ke-3. Mesinnya cuma batuk.', 5: 'Tolong berhenti. Busnya jadi malu.', 8: 'Sudah 8 kali. Sopirnya mulai ikut bingung.', 12: 'Oke, 12 kali. Tidak ada yang berubah, tapi kamu konsisten.', 20: 'Kamu resmi jadi kernet.' };
+const $ = id => document.getElementById(id);
+$('eta').textContent = ESTIMASI || 'Perkiraan selesai: sebentar lagi (versi optimis).';
+
+let j = 0; const jk = $('joke');
+function nextJoke() { jk.classList.add('out'); setTimeout(() => { jk.textContent = JOKES[j++ % JOKES.length]; jk.classList.remove('out'); }, 350); }
+jk.textContent = JOKES[j++ % JOKES.length]; setInterval(nextJoke, 4200);
+
+const t0 = Date.now();
+setInterval(() => { const s = Math.floor((Date.now() - t0) / 1000); $('tm').textContent = String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }, 1000);
+
+let n = 0, ht;
+const SAY = ['TIN TIN!', 'PIIIP!', 'TOT TOT!', 'TEEET!'];
+function honk() {
+  n++; $('hn').textContent = n;
+  const h = $('honk'); h.textContent = SAY[n % SAY.length]; h.classList.add('show'); clearTimeout(ht); ht = setTimeout(() => h.classList.remove('show'), 700);
+  const w = $('wob'); w.classList.remove('shake'); void w.getBoundingClientRect(); w.classList.add('shake');
+  if (HONK[n]) $('hm').textContent = HONK[n];
+  try { if (navigator.vibrate) navigator.vibrate(20); } catch (e) {}
+  if (window.__shake) window.__shake();
+}
+$('kl').onclick = honk; $('bus').onclick = honk;
+$('rl').onclick = () => { location.href = '/'; };
+
+/* cek berkala: kalau halaman utama sudah tidak memuat penanda maintenance, balik otomatis */
+async function cek() {
+  try {
+    const r = await fetch('/?cek=' + Date.now(), { cache: 'no-store' }), t = await r.text();
+    if (!t.includes('name="maintenance"')) location.href = '/';
+  } catch (e) {}
+}
+setInterval(cek, 30000); window.addEventListener('online', cek);
+
+/* ===== versi 3D (Three.js). Kalau gagal dimuat atau WebGL tidak ada, gambar 2D di atas tetap dipakai ===== */
+function build3D(THREE, mkCanvas) {
+  const scene = new THREE.Scene(), bus = new THREE.Group(); bus.position.set(0, 0, -1.2); scene.add(bus);
+  const mat = (c, o) => new THREE.MeshLambertMaterial(Object.assign({ color: c }, o || {}));
+  const box = (w, h, d, c, x, y, z, parent, shadow) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(c)); m.position.set(x, y, z); m.castShadow = shadow !== false; (parent || bus).add(m); return m; };
+
+  scene.add(new THREE.HemisphereLight(0xbcd0ff, 0x1b2a6b, 1.0));
+  const sun = new THREE.DirectionalLight(0xffffff, .8); sun.position.set(5, 9, 6); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024);
+  Object.assign(sun.shadow.camera, { left: -10, right: 10, top: 8, bottom: -8 }); scene.add(sun);
+
+  const road = new THREE.Mesh(new THREE.PlaneGeometry(40, 10), mat(0x10183f)); road.rotation.x = -Math.PI / 2; scene.add(road);
+  const shade = new THREE.Mesh(new THREE.PlaneGeometry(40, 10), new THREE.ShadowMaterial({ opacity: .5 })); shade.rotation.x = -Math.PI / 2; shade.position.y = .01; shade.receiveShadow = true; scene.add(shade);
+  for (let i = -9; i <= 9; i++) box(1.1, .02, .14, 0xf2b632, i * 2, .015, 1.05, scene, false);
+
+  // badan bus
+  box(6.4, 1.9, 2.2, 0xffffff, 0, 1.5, 0);
+  box(6.42, .3, 2.22, 0xe5483a, 0, 1.05, 0);
+  box(6.1, .14, 2.0, 0xe6e9f6, 0, 2.52, 0);
+  box(1.4, .25, 1.0, 0xcfd5ea, -1, 2.72, 0);
+  [-1, 1].forEach(sd => {
+    [-2.3, -1.2, -.1].forEach(x => box(.95, .75, .04, 0xbcd0ff, x, 1.95, sd * 1.11, bus, false));
+    box(.9, 1.5, .04, 0x9db4f0, 1.15, 1.45, sd * 1.11, bus, false);
+    box(.04, 1.5, .05, 0xffffff, 1.15, 1.45, sd * 1.125, bus, false);
+  });
+  box(.04, .9, 1.8, 0xbcd0ff, 3.21, 1.95, 0, bus, false);
+  box(.12, .25, 2.3, 0xcfd5ea, 3.28, .66, 0);
+  [-1, 1].forEach(sd => { const l = new THREE.Mesh(new THREE.SphereGeometry(.16, 12, 12), new THREE.MeshBasicMaterial({ color: 0xf2b632 })); l.position.set(3.22, .98, sd * .7); bus.add(l); });
+
+  // papan tujuan
+  const cv = mkCanvas(); cv.width = 512; cv.height = 128;
+  const g = cv.getContext && cv.getContext('2d');
+  if (g) { g.fillStyle = '#10183f'; g.fillRect(0, 0, 512, 128); g.fillStyle = '#f2b632'; g.font = '800 64px Arial,sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('BENGKEL', 256, 68); }
+  const board = new THREE.Mesh(new THREE.PlaneGeometry(1.5, .38), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cv) }));
+  board.position.set(3.23, 2.32, 0); board.rotation.y = Math.PI / 2; bus.add(board);
+
+  // roda (belakang kempes)
+  const wheel = (x, z, flat) => {
+    const w = new THREE.Group(), t = new THREE.Mesh(new THREE.CylinderGeometry(.5, .5, .34, 24), mat(0x15182a)), h = new THREE.Mesh(new THREE.CylinderGeometry(.2, .2, .36, 16), mat(0x8d93b4));
+    t.rotation.x = h.rotation.x = Math.PI / 2; t.castShadow = true; w.add(t, h); w.position.set(x, flat ? .42 : .5, z); if (flat) w.scale.y = .84; bus.add(w);
+  };
+  [-1.15, 1.15].forEach(z => { wheel(-2.1, z, true); wheel(2.1, z, false); });
+
+  // asap
+  const puffs = [0, .25, .5, .75].map(ph => { const m = new THREE.Mesh(new THREE.SphereGeometry(.3, 12, 12), mat(0xcfd5ea, { transparent: true, opacity: 0 })); bus.add(m); return { m, ph }; });
+
+  // kunci inggris
+  const wr = new THREE.Group();
+  box(.12, 1.0, .06, 0xcfd5ea, 0, .5, 0, wr, false);
+  const head = new THREE.Mesh(new THREE.TorusGeometry(.2, .07, 8, 16), mat(0xcfd5ea)); head.position.y = 1.1; wr.add(head);
+  wr.position.set(3.7, .1, 1.6); bus.add(wr);
+
+  // segitiga pengaman
+  const tri = new THREE.Group(), tr1 = new THREE.Mesh(new THREE.CylinderGeometry(.55, .55, .07, 3), mat(0xe5483a)), tr2 = new THREE.Mesh(new THREE.CylinderGeometry(.3, .3, .09, 3), mat(0xffffff));
+  tri.add(tr1, tr2); tri.rotation.x = -Math.PI / 2; tri.position.set(-5.6, .5, .2); tri.rotation.z = .25; scene.add(tri);
+
+  // siput
+  const sn = new THREE.Group();
+  const part = (geo, c, x, y, z, sx, sy, sz) => { const m = new THREE.Mesh(geo, mat(c)); m.position.set(x, y, z); m.scale.set(sx || 1, sy || 1, sz || 1); m.castShadow = true; sn.add(m); return m; };
+  const body = part(new THREE.SphereGeometry(.5, 16, 12), 0x9db4f0, 0, .18, 0, 1.6, .35, .55);
+  part(new THREE.SphereGeometry(.2, 12, 12), 0x9db4f0, .8, .38, 0);
+  part(new THREE.CylinderGeometry(.025, .025, .3, 6), 0x9db4f0, .88, .62, .1); part(new THREE.CylinderGeometry(.025, .025, .3, 6), 0x9db4f0, .88, .62, -.1);
+  const shell = part(new THREE.SphereGeometry(.42, 16, 12), 0xf2b632, -.1, .62, 0);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(.26, .05, 8, 20), mat(0x1d1500)); ring.position.set(-.1, .62, .38); sn.add(ring);
+  sn.scale.setScalar(.7); sn.position.set(0, 0, 2.3); scene.add(sn);
+
+  const st = { yaw: 0, shake: 0 };
+  function update(t) {
+    bus.rotation.y = -.38 + Math.sin(t * .5) * .2 + st.yaw;
+    bus.rotation.z = .028 + Math.sin(t * 1.7) * .006;
+    bus.position.y = Math.sin(t * 1.7) * .012;
+    const sh = st.shake; bus.position.x = Math.sin(t * 70) * .07 * sh; bus.rotation.x = Math.sin(t * 55) * .02 * sh; st.shake *= .93; if (st.shake < .01) st.shake = 0;
+    puffs.forEach(o => { const p = (t * .4 + o.ph) % 1; o.m.position.set(-2.6 + p * .5, 2.9 + p * 2.3, (o.ph - .4) * .5); o.m.scale.setScalar(.5 + p * 1.5); o.m.material.opacity = (1 - p) * .7 * Math.min(1, p / .15); });
+    wr.rotation.z = Math.sin(t * 5) * .55; wr.rotation.x = Math.sin(t * 2.2) * .12;
+    tri.position.y = .5 + Math.sin(t * 2) * .02;
+    const q = (t / 26) % 1; sn.position.x = -11 + q * 22; body.scale.x = 1.6 + Math.sin(t * 6) * .06; shell.position.y = .62 + Math.sin(t * 6) * .015; ring.position.y = shell.position.y;
+  }
+  return { scene, bus, update, st };
+}
+
+function start3D(THREE) {
+  const cv = $('gl'), reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const r = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true });
+  r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
+  const S = build3D(THREE, () => document.createElement('canvas'));
+  const cam = new THREE.PerspectiveCamera(36, 360 / 250, .1, 100); cam.position.set(7.2, 3.6, 9.6); cam.lookAt(.5, 1.0, .2);
+  function size() { const w = cv.clientWidth || 360; r.setSize(w, Math.round(w * 250 / 360), false); }
+  size(); window.addEventListener('resize', () => { size(); draw(); });
+  let t0 = performance.now(), raf = 0;
+  function draw() { S.update((performance.now() - t0) / 1000); r.render(S.scene, cam); }
+  function loop() { raf = requestAnimationFrame(loop); draw(); }
+  $('flat').hidden = true; cv.hidden = false; $('tip3').hidden = false;
+  if (reduced) draw(); else loop();
+  document.addEventListener('visibilitychange', () => { cancelAnimationFrame(raf); if (!document.hidden && !reduced) loop(); });
+
+  // geser = putar, ketuk = klakson
+  let down = false, sx = 0, moved = 0;
+  cv.addEventListener('pointerdown', e => { down = true; sx = e.clientX; moved = 0; cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener('pointermove', e => { if (!down) return; const dx = e.clientX - sx; sx = e.clientX; moved += Math.abs(dx); S.st.yaw = Math.max(-1.3, Math.min(1.3, S.st.yaw + dx * .012)); if (reduced) draw(); });
+  const up = () => { if (!down) return; down = false; if (moved < 6) { honk(); S.st.shake = 1; if (reduced) draw(); } };
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', () => { down = false; });
+  (function spring() { if (!down && S.st.yaw) { S.st.yaw *= .96; if (Math.abs(S.st.yaw) < .002) S.st.yaw = 0; } requestAnimationFrame(spring); })();
+  window.__shake = () => { S.st.shake = 1; };
+}
+(function () {
+  const sc = document.createElement('script');
+  sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+  sc.onload = () => { try { start3D(window.THREE); } catch (e) { $('gl').hidden = true; } };
+  document.head.appendChild(sc);
+})();
+</script>
+</body>
+</html>
