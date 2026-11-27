@@ -11,6 +11,13 @@ const ls = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
   del(k) { try { localStorage.removeItem(k); } catch (e) {} }
 };
+const THEME_LBL = { '': 'Otomatis', light: 'Terang', dark: 'Gelap' };
+const themeNow = () => ls.get('st_theme', '');
+function applyTheme() {
+  const t = themeNow(); if (t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme;
+  const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = t === 'dark' ? '#222c78' : '#1b2a6b';
+}
+applyTheme();
 const pad = n => String(n).padStart(2, '0');
 const isoToday = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
 const BLN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
@@ -29,7 +36,7 @@ const locs = s => String(s || '').split('\n').map(x => x.trim()).filter(Boolean)
 let cfg = ls.get('st_cfg', {}); if (API_URL) cfg.url = API_URL;
 let ses = ls.get('st_ses', null);
 let selMode = false, sel = new Set(), lp = false, lpT, lpXY = [0, 0];
-let fQ = '', fFrom = '', fTo = '', reminded = false;
+let fQ = '', fFrom = '', fTo = '', reminded = false, listAnim = false, loading = false;
 let S = null, L = [], R = { m: isoToday().slice(0, 7) }, tab = 'surat', cur = 'login', lgMode = 'in';
 const dk = () => 'st_draft_' + ses.user.username, ck = () => 'st_cache_' + ses.user.username;
 
@@ -129,12 +136,14 @@ document.addEventListener('click', e => {
   t.value = c.querySelector('span').textContent; t.dispatchEvent(new Event('input', { bubbles: true })); box.hidden = true;
 });
 
-let dt; function saveDraft() { if (!S || !ses || S.id) return; clearTimeout(dt); dt = setTimeout(() => { if (S && ses && !S.id) ls.set(dk(), S); }, 300); }
+let dt; function saveDraft() { updCmp(); if (!S || !ses || S.id) return; clearTimeout(dt); dt = setTimeout(() => { if (S && ses && !S.id) ls.set(dk(), S); }, 300); }
 
 /* ============ UI dasar ============ */
 let sbT;
 function snack(m, act, fn) {
   const s = $('snack'); s.innerHTML = `<span>${esc(m)}</span>${act ? `<button id="sbA">${esc(act)}</button>` : ''}`;
+  const good = /^(Tersimpan|\d+ surat (dibuat|diperbarui|terkirim)|Disalin|PDF diunduh|CSV diunduh|Surat dihapus|Server terhubung|Kata sandi diganti)/.test(m);
+  s.classList.toggle('okk', good); if (good && navigator.vibrate) { try { navigator.vibrate(12); } catch (e) {} }
   s.classList.add('show'); if (act) $('sbA').onclick = () => { s.classList.remove('show'); fn && fn(); };
   clearTimeout(sbT); sbT = setTimeout(() => s.classList.remove('show'), 3400);
 }
@@ -166,6 +175,7 @@ async function api(action, data = {}) {
     j = await r.json();
   } catch (e) { const er = new Error('Tidak bisa terhubung ke server'); er.net = true; throw er; }
   if (!j.ok) {
+    if (j.maintenance) { const er = new Error('Sedang maintenance' + (j.pesan ? ': ' + j.pesan : '')); er.net = true; er.maint = true; throw er; }
     if (j.error === 'Sesi habis') { logout(); throw new Error('Sesi habis, silakan masuk lagi'); }
     throw new Error(j.error || 'Gagal');
   }
@@ -193,13 +203,17 @@ function setTab(t) {
   ['surat', 'rekap', 'akun'].forEach(x => { $('tab_' + x).hidden = x !== t; $('n_' + x).classList.toggle('on', x === t); });
   if (t !== 'surat') { selMode = false; sel.clear(); }
   renderHead();
-  if (t === 'surat') renderList(); if (t === 'rekap') renderRekap(); if (t === 'akun') renderAkun();
+  if (t === 'surat') { listAnim = true; renderList(); } if (t === 'rekap') renderRekap(); if (t === 'akun') renderAkun();
 }
 ['surat', 'rekap', 'akun'].forEach(t => $('n_' + t).onclick = () => setTab(t));
+function greet() {
+  const h = new Date().getHours();
+  return (h < 4 ? 'Selamat malam' : h < 11 ? 'Selamat pagi' : h < 15 ? 'Selamat siang' : h < 18 ? 'Selamat sore' : 'Selamat malam') + ', ' + String(ses.user.nama || '').split(' ')[0];
+}
 function renderHead() {
   $('selBtn').hidden = !(tab === 'surat' && (L.length || selMode));
   $('selBtn').innerHTML = ic(selMode ? 'x' : 'checks');
-  $('hHi').textContent = selMode ? sel.size + ' dipilih' : 'Halo, ' + String(ses.user.nama || '').split(' ')[0];
+  $('hHi').textContent = selMode ? sel.size + ' dipilih' : greet();
   $('hTitle').textContent = selMode ? 'Pilih surat' : { surat: 'Surat saya', rekap: 'Rekap', akun: 'Akun' }[tab];
   $('fab').hidden = tab !== 'surat' || selMode;
   $('selbar').hidden = !selMode;
@@ -227,7 +241,7 @@ $('lgGo').onclick = async () => {
     const r = lgMode === 'in' ? await api('login', { username: user, password: pw })
       : await api('register', { username: user, password: pw, nama: $('upNama').value, jabatan: $('upJab').value, kode: $('upKode').value });
     startSession(r);
-  } catch (e) { $('lgErr').textContent = e.message; }
+  } catch (e) { if (e.maint) { location.href = 'maintenance.html'; return; } $('lgErr').textContent = e.message; }
   b.disabled = false; b.textContent = label;
 };
 $('lgPass').addEventListener('keydown', e => { if (e.key === 'Enter') $('lgGo').click(); });
@@ -255,8 +269,13 @@ $('srvLink').onclick = serverSheet;
 /* ============ daftar surat ============ */
 async function loadList(quiet) {
   if (!ses) return;
-  try { const r = await api('list'); L = r.data; ls.set(ck(), L); }
-  catch (e) { if (ses && !quiet) snack(e.message + ' (menampilkan data tersimpan)'); }
+  const was = L.length; if (!was) { loading = true; if (cur === 'home' && tab === 'surat') renderList(); }
+  try { const r = await api('list'); L = r.data; ls.set(ck(), L); if (!was) listAnim = true; }
+  catch (e) {
+    if (e.maint && cur === 'home') { location.href = 'maintenance.html'; return; }
+    if (ses && !quiet) snack(e.message + ' (menampilkan data tersimpan)');
+  }
+  loading = false;
   const n = updBadge();
   if (cur === 'home') { if (tab === 'surat') renderList(); if (tab === 'rekap') renderRekap(); }
   if (n && !reminded && cur === 'home') { reminded = true; snack(n + ' surat belum lengkap fotonya', 'Lihat', () => { fDoc = 'miss'; setTab('surat'); }); }
@@ -278,9 +297,12 @@ const docTag = r => { const t = docSt(r); return t === 'ok' ? `<span class="tag 
 const docTxt = r => { const t = docSt(r); return t === 'ok' ? ' · Foto lengkap' : t === 'part' ? ` · Foto ${r.foto}/${r.tot}` : t === 'no' ? ' · <span class="mis">Belum ada foto</span>' : ''; };
 function renderList() {
   renderQ(); updBadge(); $('srchBox').hidden = !L.length;
+  const anim = listAnim; listAnim = false; let idx = 0;
   const d = ls.get(dk(), null), hasDraft = d && !d.id && (locs(d.lokasi).length || d.lap.some(l => l.t || l.img));
   $('draftBox').innerHTML = hasDraft ? `<button class="draft" id="drBtn"><span style="color:var(--acc)">${ic('doc')}</span><div><b>Draf belum disimpan</b><span>${esc(locs(d.lokasi)[0] || 'Tanpa lokasi')} · ketuk untuk melanjutkan</span></div></button>` : '';
   if (hasDraft) $('drBtn').onclick = () => { S = migrate(d); go('edit'); };
+  $('list').classList.toggle('anim', anim);
+  if (!L.length && loading) { $('docFilter').innerHTML = ''; $('list').innerHTML = '<div class="sk"></div>'.repeat(3); return; }
   if (!L.length) {
     $('docFilter').innerHTML = '';
     $('list').innerHTML = `<div class="empty"><svg viewBox="0 0 96 96" fill="none"><path d="M14 24h68a6 6 0 0 1 6 6v10a9 9 0 0 0 0 16v10a6 6 0 0 1-6 6H14a6 6 0 0 1-6-6V56a9 9 0 0 0 0-16V30a6 6 0 0 1 6-6z" fill="var(--surf2)"/><path d="M36 32v32" stroke="var(--acc)" stroke-width="3" stroke-dasharray="5 5" stroke-linecap="round"/><path d="M48 42h24M48 50h24M48 58h14" stroke="var(--mut)" stroke-width="3" stroke-linecap="round"/></svg><b>Belum ada surat</b>Ketuk "Buat form" untuk mulai mencatat.</div>`;
@@ -295,7 +317,7 @@ function renderList() {
   V.forEach(r => {
     const d = parseIso(r.tanggal), key = r.tanggal.slice(0, 7), lk = locs(r.lokasi), m = mins(r);
     if (key !== last) { last = key; html += `<h4 class="grp">${d ? BLN[d.getMonth()] + ' ' + d.getFullYear() : 'Tanpa tanggal'}</h4>`; }
-    html += `<div class="tix${selMode && sel.has(r.id) ? ' sel' : ''}" data-o="${esc(r.id)}" role="button" tabindex="0"><div class="stub"><b>${d ? pad(d.getDate()) : '--'}</b><small>${d ? HARI[d.getDay()] : ''}</small></div>
+    html += `<div class="tix${selMode && sel.has(r.id) ? ' sel' : ''}" data-o="${esc(r.id)}" role="button" tabindex="0" style="--i:${Math.min(idx++, 10)}"><div class="stub"><b>${d ? pad(d.getDate()) : '--'}</b><small>${d ? HARI[d.getDay()] : ''}</small></div>
       <div class="main"><b>${esc(lk.join(' · ') || 'Tanpa lokasi')}</b><span>${esc(tt(r.jam_mulai) || '--:--')} – ${esc(tt(r.jam_selesai) || '--:--')}</span>
       <div class="tags"><span class="tag">${dur(m)}</span><span class="tag">${r.kegiatan} kegiatan</span>${docTag(r)}</div></div>
       ${selMode ? `<span class="cb">${ic('check')}</span>` : `<button class="ib x" data-x="${esc(r.id)}" aria-label="Hapus">${ic('trash')}</button>`}</div>`;
@@ -319,7 +341,7 @@ $('list').addEventListener('click', async e => {
     if (x) {
       e.stopPropagation();
       if (await confirmSheet('Hapus surat ini?', 'Surat beserta foto dan tanda tangannya akan dihapus permanen.', 'Hapus')) {
-        await api('delete', { id: x.dataset.x }); L = L.filter(r => r.id !== x.dataset.x); ls.set(ck(), L); renderList(); snack('Surat dihapus');
+        await api('delete', { id: x.dataset.x }); const tk = x.closest('.tix'); if (tk) { tk.classList.add('tear'); await new Promise(r => setTimeout(r, 380)); } L = L.filter(r => r.id !== x.dataset.x); ls.set(ck(), L); renderList(); snack('Surat dihapus');
       }
     } else if (o) await openView(o.dataset.o);
   } catch (err) { snack(err.message); }
@@ -513,7 +535,7 @@ function fillEditor() {
   ['nama', 'jabatan', 'tgl', 'j1', 'j2'].forEach(k => $(k).value = S[k] || '');
   const l = String(S.lokasi || '').split('\n'); [0, 1, 2].forEach(i => $('lk' + i).value = l[i] || '');
   $('edTitle').textContent = S.id ? 'Ubah surat' : 'Surat baru';
-  renderLap(); renderSig(); renderCopyBox(); updJamWarn(); renderStampSeg();
+  renderLap(); renderSig(); renderCopyBox(); updJamWarn(); renderStampSeg(); updCmp();
 }
 /* foto: dikecilkan + stempel waktu dan lokasi (bisa dimatikan di tab Akun) */
 function getPos() {
@@ -651,7 +673,7 @@ $('saveBtn').onclick = async () => {
     if (e.net && qAdd(data)) {
       if (wasNew) ls.del(dk());
       learn(S); b.disabled = false; b.textContent = 'Simpan'; goHome();
-      snack('Belum ada sinyal. Surat disimpan di HP dan dikirim otomatis nanti.'); return;
+      snack(e.maint ? 'Sedang maintenance. Surat disimpan di HP dan dikirim otomatis nanti.' : 'Belum ada sinyal. Surat disimpan di HP dan dikirim otomatis nanti.'); return;
     }
     snack('Gagal menyimpan: ' + e.message + '. Draf aman di HP.'); b.disabled = false; b.textContent = 'Simpan'; return;
   }
@@ -708,6 +730,20 @@ function jamIssues(j1, j2) {
   if (m === 0) w.push('Jam mulai dan selesai sama.');
   else { if (b < a) w.push('Jam selesai lebih awal dari jam mulai (dihitung melewati tengah malam).'); if (m > 720) w.push('Durasi ' + dur(m) + ' lebih dari 12 jam.'); }
   return w;
+}
+function cmpItems() {
+  const kg = S.lap.filter(l => String(l.t || '').trim());
+  return [
+    ['tanggal', !!S.tgl], ['jam', hm(S.j1) != null && hm(S.j2) != null], ['lokasi', locs(S.lokasi).length > 0], ['kegiatan', kg.length > 0],
+    ['foto kegiatan', kg.length > 0 && kg.every(l => l.img || l.fid)], ['pejabat', S.sig.slice(0, 3).some(g => String(g.n || '').trim())],
+    ['TTD "Dibuat oleh"', !!(S.sig[3].img || S.sig[3].fid)]
+  ];
+}
+function updCmp() {
+  if (!S || !S.lap || !S.sig || !$('cmp')) return;
+  const it = cmpItems(), n = it.filter(x => x[1]).length, miss = it.filter(x => !x[1]).map(x => x[0]);
+  $('cmpFill').style.width = Math.round(n / it.length * 100) + '%'; $('cmp').classList.toggle('done', !miss.length);
+  $('cmpTxt').textContent = miss.length ? `Kelengkapan ${n} dari ${it.length} · Belum: ${miss.slice(0, 3).join(', ')}${miss.length > 3 ? '…' : ''}` : 'Semua lengkap, siap disimpan';
 }
 function updJamWarn() { const w = jamIssues(S.j1, S.j2), el = $('jamWarn'); el.textContent = w.join(' '); el.hidden = !w.length; }
 ['j1', 'j2'].forEach(id => $(id).addEventListener('input', () => { if (S) updJamWarn(); }));
@@ -870,6 +906,15 @@ function renderRekap() {
   <div class="acts"><button class="btn" id="rkPrint">${ic('print')}Cetak rekap</button><button class="btn tonal" id="rkCsv">${ic('down')}Unduh CSV</button></div>`
     : `<div class="empty"><b>Belum ada data</b>Tidak ada surat di bulan ${monthLabel()}.</div>`}`;
 }
+function countUps() {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  document.querySelectorAll('#tab_rekap .stat b').forEach(b => {
+    const t = b.textContent.trim(); if (!/^\d+$/.test(t) || +t === 0) return;
+    const to = +t, t0 = performance.now();
+    (function f(now) { const p = Math.min(1, (now - t0) / 700); b.textContent = p < 1 ? Math.round(to * (1 - Math.pow(1 - p, 3))) : to; if (p < 1) requestAnimationFrame(f); })(t0);
+  });
+}
+{ const _rr = renderRekap; renderRekap = function () { _rr(); countUps(); }; }
 $('tab_rekap').addEventListener('click', async e => {
   const m = e.target.closest('[data-m]'), o = e.target.closest('[data-o]');
   if (m) { const [y, mo] = R.m.split('-'), d = new Date(+y, +mo - 1 + +m.dataset.m, 1); R.m = `${d.getFullYear()}-${pad(d.getMonth() + 1)}`; renderRekap(); }
@@ -901,8 +946,9 @@ function downloadCsv() {
 function renderAkun() {
   const u = ses.user;
   $('tab_akun').innerHTML = `<div class="me"><div class="av">${esc((u.nama || '?').trim().charAt(0).toUpperCase())}</div><div><b>${esc(u.nama)}</b><span>@${esc(u.username)}${u.jabatan ? ' · ' + esc(u.jabatan) : ''}</span></div></div>
-  <div style="margin-top:10px"><button class="row-item" id="akStamp">${ic('camera')}Stempel foto<span class="rt">${STAMP_LBL[stampMode()]}</span></button><button class="row-item" id="akPass">${ic('key')}Ganti kata sandi</button><button class="row-item" id="akSrv">${ic('link')}Alamat server</button><button class="row-item dng" id="akOut">${ic('out')}Keluar</button></div>
+  <div style="margin-top:10px"><button class="row-item" id="akTheme">${ic('eye')}Tampilan<span class="rt">${THEME_LBL[themeNow()]}</span></button><button class="row-item" id="akStamp">${ic('camera')}Stempel foto<span class="rt">${STAMP_LBL[stampMode()]}</span></button><button class="row-item" id="akPass">${ic('key')}Ganti kata sandi</button><button class="row-item" id="akSrv">${ic('link')}Alamat server</button><button class="row-item dng" id="akOut">${ic('out')}Keluar</button></div>
   <p class="note">Surat, foto, dan rekap hanya bisa dilihat dan diubah oleh akun ini.</p>`;
+  $('akTheme').onclick = () => { const o = ['', 'light', 'dark'], m = o[(o.indexOf(themeNow()) + 1) % 3]; ls.set('st_theme', m); applyTheme(); renderAkun(); snack('Tampilan: ' + THEME_LBL[m]); };
   $('akStamp').onclick = () => { const o = ['off', 'time', 'full'], m = o[(o.indexOf(stampMode()) + 1) % 3]; ls.set('st_stamp2', m); renderAkun(); snack('Stempel foto: ' + STAMP_LBL[m]); };
   $('akSrv').onclick = serverSheet;
   $('akOut').onclick = async () => { if (await confirmSheet('Keluar dari akun?', 'Draf yang belum disimpan tetap aman di HP ini.', 'Keluar')) logout(); };
@@ -919,6 +965,41 @@ function renderAkun() {
   };
 }
 
+/* ============ gestur & gerak ============ */
+(function () {
+  let last = 0;
+  window.addEventListener('scroll', () => {
+    const y = window.scrollY, hb = document.querySelector('.hbar'), fab = $('fab');
+    if (hb) hb.classList.toggle('sm', y > 28);
+    if (y > last + 4 && y > 90) fab.classList.add('mini'); else if (y < last - 4 || y < 60) fab.classList.remove('mini');
+    last = y;
+  }, { passive: true });
+  // tarik daftar ke bawah untuk memuat ulang
+  let y0 = null, dy = 0; const el = $('ptr');
+  window.addEventListener('touchstart', e => { y0 = (window.scrollY <= 0 && cur === 'home' && tab === 'surat' && !selMode && $('bs').hidden && $('prep').hidden) ? e.touches[0].clientY : null; dy = 0; }, { passive: true });
+  window.addEventListener('touchmove', e => {
+    if (y0 == null) return; dy = e.touches[0].clientY - y0;
+    if (dy <= 0) { el.style.opacity = 0; return; }
+    const p = Math.min(dy, 140); el.style.transition = 'none'; el.style.opacity = Math.min(1, p / 60); el.style.transform = `translate(-50%,${p * .5 - 40}px) rotate(${p * 3}deg)`;
+  }, { passive: true });
+  window.addEventListener('touchend', () => {
+    if (y0 == null) return; el.style.transition = '';
+    if (dy > 110) { el.classList.add('spin'); el.style.opacity = 1; el.style.transform = 'translate(-50%,30px)'; Promise.resolve(loadList()).finally(() => { el.classList.remove('spin'); el.style.opacity = 0; el.style.transform = 'translate(-50%,-40px)'; }); }
+    else { el.style.opacity = 0; el.style.transform = 'translate(-50%,-40px)'; }
+    y0 = null; dy = 0;
+  });
+  // tarik sheet bawah ke bawah untuk menutup
+  const bs = $('bs'); let sy = null, sd = 0;
+  bs.addEventListener('pointerdown', e => { if (e.target.closest('.grab') || (e.target === bs && e.clientY - bs.getBoundingClientRect().top < 34)) { sy = e.clientY; sd = 0; bs.style.transition = 'none'; bs.setPointerCapture(e.pointerId); } });
+  bs.addEventListener('pointermove', e => { if (sy == null) return; sd = Math.max(0, e.clientY - sy); bs.style.transform = `translateY(${sd}px)`; });
+  const end = () => {
+    if (sy == null) return; sy = null; bs.style.transition = '';
+    if (sd > 90) { bs.style.transform = 'translateY(100%)'; closeSheet(); setTimeout(() => { bs.style.transform = ''; }, 260); } else bs.style.transform = '';
+    sd = 0;
+  };
+  bs.addEventListener('pointerup', end); bs.addEventListener('pointercancel', end);
+})();
+
 /* ============ mulai ============ */
 (function boot() {
   setMode('in');
@@ -926,4 +1007,6 @@ function renderAkun() {
   else { ses = null; history.replaceState({ v: 'login' }, ''); setView('login'); }
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   if (ses) { renderQ(); setTimeout(() => qSync(true), 1500); }
+  // belum login: kalau server sedang maintenance, langsung ke halaman bus mogok (?admin=1 untuk lewat)
+  if (!ses && cfg.url && !/[?&]admin=1/.test(location.search)) api('status').then(r => { if (r.maintenance) location.replace('maintenance.html'); }).catch(() => {});
 })();

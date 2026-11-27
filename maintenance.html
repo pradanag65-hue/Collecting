@@ -35,6 +35,7 @@ button{min-height:46px;padding:0 24px;border:0;border-radius:23px;font:800 15px 
 .b1{background:var(--amber);color:#1d1500}
 .b2{background:transparent;color:#fff;box-shadow:inset 0 0 0 2px #ffffff80}
 button:active{transform:scale(.96)}
+.msg{margin:14px auto 0;max-width:36ch;padding:10px 16px;border-radius:14px;background:#ffffff1f;font-weight:700;font-size:15px}
 .eta{margin:6px 0 0;font-size:14px;font-weight:700}
 .foot{margin:10px 0 0;font-size:12px;opacity:.6}
 .honk{position:absolute;right:2%;top:2%;padding:6px 12px;border-radius:14px 14px 14px 2px;background:#fff;color:var(--navy);font-weight:800;font-size:15px;opacity:0;transform:scale(.6) rotate(-6deg);transform-origin:left bottom;transition:all .15s;pointer-events:none}
@@ -94,6 +95,7 @@ button:active{transform:scale(.96)}
   <p class="tip3" id="tip3" hidden>Geser untuk memutar busnya. Ketuk untuk klakson.</p>
   <h1>Busnya lagi mogok.</h1>
   <p class="lead">Pintunya ditutup sebentar buat dirapikan. Tidak ada yang hilang, cuma lagi diservis.</p>
+  <p class="msg" id="msg" hidden></p>
   <p class="joke" id="joke" aria-live="polite"></p>
 
   <div class="pg"><div class="row"><span>Perbaikan</span><span>99%</span></div><div class="bar"><div class="fill"></div></div><small>Yang 1% terakhir memang biasanya paling lama.</small></div>
@@ -102,7 +104,7 @@ button:active{transform:scale(.96)}
   <p class="honkmsg" id="hm"></p>
   <div class="btns"><button class="b1" id="kl">Klakson</button><button class="b2" id="rl">Coba lagi</button></div>
   <p class="eta" id="eta"></p>
-  <p class="foot">Halaman ini mengecek sendiri tiap 30 detik. Kalau sudah beres, kamu dibawa balik otomatis.</p>
+  <p class="foot">Halaman ini mengecek sendiri tiap 30 detik. Kalau sudah beres, kamu dibawa balik otomatis. <a href="/?admin=1" style="color:inherit">Admin</a></p>
 </div>
 
 <script>
@@ -141,13 +143,27 @@ function honk() {
 $('kl').onclick = honk; $('bus').onclick = honk;
 $('rl').onclick = () => { location.href = '/'; };
 
-/* cek berkala: kalau halaman utama sudah tidak memuat penanda maintenance, balik otomatis */
+/* status dari spreadsheet (kalau aplikasi sudah pernah dipakai di perangkat ini) */
+function apiUrl() { try { return (JSON.parse(localStorage.getItem('st_cfg') || '{}')).url || ''; } catch (e) { return ''; } }
+async function status() {
+  const u = apiUrl(); if (!u) return null;
+  try { return await (await fetch(u, { method: 'POST', body: JSON.stringify({ action: 'status' }) })).json(); } catch (e) { return null; }
+}
+function tampil(st) {
+  if (st && st.pesan) { $('msg').textContent = st.pesan; $('msg').hidden = false; }
+  if (st && st.kembali) $('eta').textContent = 'Perkiraan kembali: ' + st.kembali;
+}
+/* cek berkala: tetap di sini selama spreadsheet bilang ON atau halaman utama masih dialihkan ke sini; selain itu balik otomatis */
 async function cek() {
+  const st = await status();
+  if (st && st.ok) { tampil(st); if (st.maintenance) return; }
   try {
     const r = await fetch('/?cek=' + Date.now(), { cache: 'no-store' }), t = await r.text();
     if (!t.includes('name="maintenance"')) location.href = '/';
   } catch (e) {}
 }
+cek0();
+async function cek0() { tampil(await status()); }
 setInterval(cek, 30000); window.addEventListener('online', cek);
 
 /* ===== versi 3D (Three.js). Kalau gagal dimuat atau WebGL tidak ada, gambar 2D di atas tetap dipakai ===== */
