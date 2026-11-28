@@ -227,7 +227,7 @@ $('refBtn').onclick = () => { snack('Memuat…'); loadList(); loadHist(); };
 function setMode(m) {
   lgMode = m; $('segIn').classList.toggle('on', m === 'in'); $('segUp').classList.toggle('on', m === 'up');
   document.querySelectorAll('.up-only').forEach(e => e.hidden = m !== 'up');
-  $('lgGo').textContent = m === 'in' ? 'Masuk' : 'Daftar'; $('lgErr').textContent = '';
+  $('lgGo').textContent = m === 'in' ? 'Masuk' : 'Daftar'; $('lgErr').textContent = ''; $('lgForgot').hidden = m !== 'in';
   $('lgPass').autocomplete = m === 'in' ? 'current-password' : 'new-password';
 }
 $('segIn').onclick = () => setMode('in'); $('segUp').onclick = () => setMode('up');
@@ -264,6 +264,23 @@ function serverSheet() {
     try { await api('ping'); closeSheet(); snack('Server terhubung'); } catch (e) { snack('Gagal: ' + e.message); }
   };
 }
+function forgotSheet() {
+  openSheet(`<h3>Lupa kata sandi</h3><p class="mut">Minta <b>kode reset</b> ke admin lewat WhatsApp. Admin membuatnya dari menu <b>Setoran</b> di spreadsheet. Kodenya berlaku sebentar dan hanya sekali pakai.</p>
+    <div class="fld"><input id="fgUser" placeholder=" " value="${esc($('lgUser').value.trim())}" autocapitalize="none" spellcheck="false"><label for="fgUser">Username</label></div>
+    <div class="fld"><input id="fgKode" placeholder=" " autocapitalize="characters" autocomplete="off" spellcheck="false" style="text-transform:uppercase;letter-spacing:.12em"><label for="fgKode">Kode reset</label></div>
+    <div class="fld"><input id="fgNew" type="password" placeholder=" " autocomplete="new-password"><label for="fgNew">Kata sandi baru (min. 6 karakter)</label></div>
+    <p id="fgErr" class="err" role="alert"></p>
+    <div class="acts end"><button class="btn txt" id="fgNo">Batal</button><button class="btn" id="fgOk">Ganti kata sandi</button></div>`);
+  $('fgNo').onclick = closeSheet;
+  $('fgOk').onclick = async () => {
+    const un = $('fgUser').value.trim(), kd = $('fgKode').value.trim(), nw = $('fgNew').value, b = $('fgOk');
+    if (!un || !kd || !nw) { $('fgErr').textContent = 'Isi username, kode, dan kata sandi baru'; return; }
+    b.disabled = true; b.textContent = 'Tunggu…'; $('fgErr').textContent = '';
+    try { const r = await api('lupa', { username: un, kode: kd, baru: nw }); closeSheet(); startSession(r); snack('Kata sandi diganti'); }
+    catch (e) { if (e.maint) { location.href = 'maintenance.html'; return; } $('fgErr').textContent = e.message; b.disabled = false; b.textContent = 'Ganti kata sandi'; }
+  };
+}
+$('lgForgot').onclick = () => { if (!cfg.url) { $('lgErr').textContent = 'Atur alamat server dulu (tombol di bawah)'; return; } forgotSheet(); };
 $('srvLink').onclick = serverSheet;
 
 /* ============ daftar surat ============ */
